@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pyworld MVP</title>
+<style>
+  :root { --bg:#12151c; --panel:#1b202b; --line:#2a3140; --fg:#e4e8f0; --dim:#8b95a8; --acc:#5ac8a0; --warn:#f0b050; --bad:#ef6a6a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui, sans-serif; }
+  header { padding:10px 16px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; }
+  #stats span { margin-right:14px; color:var(--dim); } #stats b { color:var(--fg); }
+  main { display:flex; gap:12px; padding:12px 16px; flex-wrap:wrap; }
+  .col { flex:1 1 420px; min-width:300px; display:flex; flex-direction:column; gap:10px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px; }
+  canvas { width:100%; height:auto; background:#0d1017; border-radius:6px; display:block; }
+  textarea { width:100%; height:300px; background:#0d1017; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:8px;
+             font:13px/1.45 ui-monospace, Menlo, Consolas, monospace; tab-size:4; resize:vertical; }
+  button { background:#2a3347; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 10px; cursor:pointer; font:inherit; }
+  button:hover:not(:disabled) { background:#37425c; } button:disabled { opacity:.45; cursor:default; }
+  button.primary { background:var(--acc); color:#08241a; border-color:var(--acc); font-weight:600; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+  #log { height:150px; overflow:auto; font:12px/1.4 ui-monospace, Menlo, Consolas, monospace; color:var(--dim); white-space:pre-wrap; }
+  #log .err { color:var(--bad); } #log .ok { color:var(--acc); }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); margin:0 0 6px; }
+  details summary { cursor:pointer; color:var(--dim); } details pre { margin:6px 0 0; font-size:12px; white-space:pre-wrap; color:var(--dim); }
+  #loading { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:10; color:var(--dim); }
+  #toast { color:var(--warn); min-height:1.4em; }
+</style>
+</head>
+<body>
+<div id="loading">Loading Python runtime (first load downloads ~10 MB)&hellip;</div>
+<header>
+  <h1>Pyworld <small style="color:var(--dim);font-weight:400">MVP</small></h1>
+  <div id="stats"></div>
+  <div id="toast"></div>
+</header>
+<main>
+  <div class="col">
+    <div class="panel"><canvas id="map" width="672" height="448"></canvas>
+      <div class="row">
+        <button id="run" class="primary">Run</button>
+        <button id="stepBtn">Step</button>
+        <label>Speed <select id="speed"><option value="2">2/s</option><option value="5" selected>5/s</option><option value="15">15/s</option><option value="40">40/s</option></select></label>
+        <button id="reset" style="margin-left:auto">Reset world</button>
+      </div>
+    </div>
+    <div class="panel"><h2>Upgrades</h2><div id="shop" class="row" style="margin-top:0"></div></div>
+    <div class="panel"><h2>Log</h2><div id="log"></div></div>
+  </div>
+  <div class="col">
+    <div class="panel">
+      <h2>Your code</h2>
+      <textarea id="code" spellcheck="false"></textarea>
+      <div class="row"><button id="deploy" class="primary">Deploy (Ctrl+Enter)</button><button id="resetCode">Restore starter</button></div>
+    </div>
+    <div class="panel"><details open><summary>API cheat sheet</summary><pre>def tick(drone):            # runs for every drone, every tick
+  drone.x, drone.y, drone.cargo, drone.capacity, drone.id
+  drone.memory               # dict that persists for this drone
+  drone.at_base()   drone.ore_here()
+  drone.move(dx, dy)         # one step, no diagonals
+  drone.move_toward(x, y)
+  drone.mine()  drone.deposit()   # base is at (0, 0)
+  drone.scan()               # LOCKED: [(x, y, amount), ...] within 6 tiles
+
+def colony_tick(colony):    # optional, runs once per tick
+  colony.ore, colony.drones, colony.tick, colony.memory
+  colony.buy_drone()   colony.has("scan")
+
+Rules: 1 action per drone per tick. Each drone gets a CPU budget of traced
+lines per tick; blow it and that drone idles. Only `math` can be imported.</pre></details></div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const SIM_SOURCE = "\"\"\"Pyworld sim core: a small deterministic colony world driven by player Python.\n\nPure Python with no third-party dependencies, so it runs both under CPython\n(tests) and inside Pyodide (browser client).\n\"\"\"\nimport builtins\nimport json\nimport math\nimport random\nimport sys\n\nPLAYER_FILE = \"<player>\"\nDRONE_COST = 10\nMAX_DRONES = 8\nCAPACITY = 5\nBASE = (0, 0)\nBASE_BUDGET = 200  # traced lines of player code per drone per tick\nTECH = {\n    \"scan\": {\"cost\": 15, \"desc\": \"Unlock drone.scan(): find ore within 6 tiles\"},\n    \"cpu\": {\"cost\": 25, \"desc\": \"+200 CPU budget per drone per tick\"},\n}\n\nSTARTER = '''\\\n# Runs once per drone, every tick. One action per tick (move / mine / deposit).\ndef tick(drone):\n    if drone.cargo >= drone.capacity:\n        if drone.at_base():\n            drone.deposit()\n        else:\n            drone.move_toward(0, 0)      # head home\n    elif drone.ore_here() > 0:\n        drone.mine()\n    else:\n        # You have no scanner yet. The first ore patch is near (4, 3).\n        drone.move_toward(4, 3)\n'''\n\n_SAFE_NAMES = (\n    \"abs all any bool dict divmod enumerate filter float int isinstance len list \"\n    \"map max min pow print range reversed round set sorted str sum tuple zip \"\n    \"True False None Exception ValueError KeyError IndexError TypeError\"\n).split()\n\n\nclass LockedError(Exception):\n    \"\"\"Raised when player code calls an API that has not been unlocked.\"\"\"\n\n\nclass BudgetExceeded(BaseException):\n    \"\"\"Player code used up its CPU budget. BaseException so `except Exception` can't hide it.\"\"\"\n\n\ndef _safe_import(name, *args, **kwargs):\n    if name == \"math\":\n        return math\n    raise ImportError(\"only 'math' can be imported\")\n\n\ndef _safe_builtins():\n    b = {n: getattr(builtins, n) for n in _SAFE_NAMES}\n    b[\"__import__\"] = _safe_import\n    return b\n\n\nclass Drone:\n    def __init__(self, id, x, y):\n        self.id = id\n        self.x = x\n        self.y = y\n        self.cargo = 0\n        self.memory = {}\n        self.acted = False\n\n\nclass DroneAPI:\n    \"\"\"What player code sees. Internals are not reachable from here.\"\"\"\n\n    __slots__ = (\"_d\", \"_w\")\n\n    def __init__(self, drone, world):\n        self._d = drone\n        self._w = world\n\n    @property\n    def id(self):\n        return self._d.id\n\n    @property\n    def x(self):\n        return self._d.x\n\n    @property\n    def y(self):\n        return self._d.y\n\n    @property\n    def cargo(self):\n        return self._d.cargo\n\n    @property\n    def capacity(self):\n        return CAPACITY\n\n    @property\n    def memory(self):\n        return self._d.memory\n\n    def at_base(self):\n        return (self._d.x, self._d.y) == BASE\n\n    def ore_here(self):\n        return self._w.ore_map.get((self._d.x, self._d.y), 0)\n\n    def _act(self):\n        if self._d.acted:\n            return False\n        self._d.acted = True\n        return True\n\n    def move(self, dx, dy):\n        \"\"\"Step one tile. Only the sign of dx/dy is used; diagonals are not allowed.\"\"\"\n        d = self._d\n        if d.acted:\n            return False\n        sx = (dx > 0) - (dx < 0)\n        sy = (dy > 0) - (dy < 0)\n        if sx and sy:\n            sy = 0\n        nx, ny = d.x + sx, d.y + sy\n        if (sx or sy) and 0 <= nx < self._w.w and 0 <= ny < self._w.h:\n            d.acted = True\n            d.x, d.y = nx, ny\n            return True\n        return False\n\n    def move_toward(self, x, y):\n        dx, dy = x - self._d.x, y - self._d.y\n        if dx == 0 and dy == 0:\n            return False\n        if abs(dx) >= abs(dy):\n            return self.move(dx, 0)\n        return self.move(0, dy)\n\n    def mine(self):\n        d, w = self._d, self._w\n        pos = (d.x, d.y)\n        if d.acted or d.cargo >= CAPACITY or w.ore_map.get(pos, 0) <= 0:\n            return False\n        d.acted = True\n        w.ore_map[pos] -= 1\n        d.cargo += 1\n        return True\n\n    def deposit(self):\n        d, w = self._d, self._w\n        if d.acted or d.cargo <= 0 or (d.x, d.y) != BASE:\n            return 0\n        d.acted = True\n        n, d.cargo = d.cargo, 0\n        w.ore += n\n        w.mined_total += n\n        return n\n\n    def scan(self):\n        if \"scan\" not in self._w.tech:\n            raise LockedError(\"drone.scan() is locked. Unlock 'scan' (15 ore).\")\n        d = self._d\n        found = []\n        for (x, y), amt in self._w.ore_map.items():\n            dist = abs(x - d.x) + abs(y - d.y)\n            if amt > 0 and dist <= 6:\n                found.append((dist, x, y, amt))\n        found.sort()\n        return [(x, y, amt) for _, x, y, amt in found]\n\n\nclass ColonyAPI:\n    __slots__ = (\"_w\",)\n\n    def __init__(self, world):\n        self._w = world\n\n    @property\n    def ore(self):\n        return self._w.ore\n\n    @property\n    def tick(self):\n        return self._w.tick_n\n\n    @property\n    def drones(self):\n        return len(self._w.drones)\n\n    @property\n    def memory(self):\n        return self._w.shared\n\n    def has(self, tech):\n        return tech in self._w.tech\n\n    def buy_drone(self):\n        return self._w.buy_drone()\n\n\nclass World:\n    def __init__(self, seed=1, w=24, h=16):\n        self.seed = seed\n        self.w = w\n        self.h = h\n        self.tick_n = 0\n        self.ore = 0\n        self.mined_total = 0\n        self.tech = set()\n        self.budget = BASE_BUDGET\n        self.ore_map = {}\n        self.max_ore = {}\n        self.drones = []\n        self.next_id = 1\n        self.shared = {}\n        self.logs = []\n        self.code = STARTER\n        self._tick_fn = None\n        self._colony_fn = None\n        self._gen()\n        self._spawn()\n        self.deploy(STARTER)\n\n    # ---- world setup -------------------------------------------------\n    def _gen(self):\n        rng = random.Random(self.seed)\n        centers = [(4, 3)]\n        for _ in range(5):\n            centers.append((rng.randint(8, self.w - 3), rng.randint(2, self.h - 3)))\n        for cx, cy in centers:\n            for dx in range(-2, 3):\n                for dy in range(-2, 3):\n                    x, y = cx + dx, cy + dy\n                    if dx * dx + dy * dy <= 5 and 0 <= x < self.w and 0 <= y < self.h and (x, y) != BASE:\n                        if (x, y) not in self.max_ore:\n                            self.max_ore[(x, y)] = rng.randint(8, 15)\n        self.ore_map = dict(self.max_ore)\n\n    def _spawn(self):\n        d = Drone(self.next_id, *BASE)\n        self.next_id += 1\n        self.drones.append(d)\n        return d\n\n    # ---- player actions ----------------------------------------------\n    def log(self, msg):\n        self.logs.append(\"[%d] %s\" % (self.tick_n, msg))\n        del self.logs[:-60]\n\n    def buy_drone(self):\n        if self.ore >= DRONE_COST and len(self.drones) < MAX_DRONES:\n            self.ore -= DRONE_COST\n            self._spawn()\n            return True\n        return False\n\n    def unlock(self, name):\n        info = TECH.get(name)\n        if info is None or name in self.tech or self.ore < info[\"cost\"]:\n            return False\n        self.ore -= info[\"cost\"]\n        self.tech.add(name)\n        if name == \"cpu\":\n            self.budget += 200\n        self.log(\"Unlocked %s\" % name)\n        return True\n\n    def deploy(self, code):\n        \"\"\"Compile and load player code. On failure the old code keeps running.\"\"\"\n        ns = {\"__builtins__\": _safe_builtins(), \"colony\": ColonyAPI(self), \"math\": math}\n        try:\n            self._run(lambda: exec(compile(code, PLAYER_FILE, \"exec\"), ns))\n        except BudgetExceeded:\n            self.log(\"Deploy failed: top-level code exceeded CPU budget\")\n            return False\n        except BaseException as e:  # SyntaxError etc.\n            self.log(\"Deploy failed: %s: %s\" % (type(e).__name__, e))\n            return False\n        if not callable(ns.get(\"tick\")):\n            self.log(\"Deploy failed: define `def tick(drone):`\")\n            return False\n        self.code = code\n        self._tick_fn = ns[\"tick\"]\n        self._colony_fn = ns.get(\"colony_tick\")\n        self.log(\"Code deployed\")\n        return True\n\n    # ---- simulation --------------------------------------------------\n    def _run(self, fn, *args):\n        \"\"\"Run player code, counting executed player lines against the budget.\"\"\"\n        budget = self.budget\n        count = 0\n\n        def local_tracer(frame, event, arg):\n            nonlocal count\n            if event == \"line\":\n                count += 1\n                if count > budget:\n                    raise BudgetExceeded()\n            return local_tracer\n\n        def tracer(frame, event, arg):\n            if event == \"call\" and frame.f_code.co_filename == PLAYER_FILE:\n                return local_tracer\n            return None\n\n        old = sys.gettrace()\n        sys.settrace(tracer)\n        try:\n            return fn(*args)\n        finally:\n            sys.settrace(old)\n\n    def step(self):\n        if self._colony_fn:\n            self._guarded(self._colony_fn, ColonyAPI(self), who=\"colony_tick\")\n        for d in self.drones:\n            d.acted = False\n            self._guarded(self._tick_fn, DroneAPI(d, self), who=\"drone %d\" % d.id)\n        self.tick_n += 1\n        if self.tick_n % 50 == 0:  # slow regrowth keeps the idle loop alive\n            for pos, mx in self.max_ore.items():\n                if self.ore_map[pos] < mx:\n                    self.ore_map[pos] += 1\n\n    def _guarded(self, fn, arg, who):\n        try:\n            self._run(fn, arg)\n        except BudgetExceeded:\n            self.log(\"%s: CPU budget exceeded (%d lines)\" % (who, self.budget))\n        except LockedError as e:\n            self.log(\"%s: %s\" % (who, e))\n        except Exception as e:\n            self.log(\"%s: %s: %s\" % (who, type(e).__name__, e))\n\n    def run(self, n):\n        for _ in range(n):\n            self.step()\n\n    # ---- persistence / UI --------------------------------------------\n    def snapshot(self):\n        return {\n            \"w\": self.w, \"h\": self.h, \"tick\": self.tick_n, \"ore\": self.ore,\n            \"mined_total\": self.mined_total, \"budget\": self.budget,\n            \"tech\": sorted(self.tech),\n            \"tech_info\": {k: dict(v, owned=k in self.tech) for k, v in TECH.items()},\n            \"drone_cost\": DRONE_COST, \"max_drones\": MAX_DRONES,\n            \"ore_tiles\": [[x, y, a] for (x, y), a in self.ore_map.items() if a > 0],\n            \"drones\": [{\"id\": d.id, \"x\": d.x, \"y\": d.y, \"cargo\": d.cargo} for d in self.drones],\n            \"logs\": self.logs[-30:],\n        }\n\n    def to_dict(self):\n        return {\n            \"seed\": self.seed, \"tick\": self.tick_n, \"ore\": self.ore,\n            \"mined_total\": self.mined_total, \"tech\": sorted(self.tech),\n            \"budget\": self.budget, \"next_id\": self.next_id, \"code\": self.code,\n            \"ore_map\": [[x, y, a] for (x, y), a in self.ore_map.items()],\n            \"drones\": [\n                {\"id\": d.id, \"x\": d.x, \"y\": d.y, \"cargo\": d.cargo, \"memory\": d.memory}\n                for d in self.drones\n            ],\n            \"shared\": self.shared, \"logs\": self.logs,\n        }\n\n    def save(self):\n        return json.dumps(self.to_dict(), default=repr)\n\n    @classmethod\n    def load(cls, text):\n        s = json.loads(text)\n        w = cls(seed=s[\"seed\"])\n        w.tick_n, w.ore, w.mined_total = s[\"tick\"], s[\"ore\"], s[\"mined_total\"]\n        w.tech, w.budget, w.next_id = set(s[\"tech\"]), s[\"budget\"], s[\"next_id\"]\n        w.ore_map = {(x, y): a for x, y, a in s[\"ore_map\"]}\n        w.shared = s[\"shared\"]\n        logs = list(s[\"logs\"])\n        w.drones = []\n        for ds in s[\"drones\"]:\n            d = Drone(ds[\"id\"], ds[\"x\"], ds[\"y\"])\n            d.cargo, d.memory = ds[\"cargo\"], ds[\"memory\"]\n            w.drones.append(d)\n        if not w.deploy(s[\"code\"]):\n            w.deploy(STARTER)\n        w.logs = logs\n        return w\n";
+const SAVE_KEY = "pyworld-mvp-save-v1";
+const CELL = 28;
+const $ = id => document.getElementById(id);
+let py, snap = null, timer = null, running = false;
+let step, runN, deploy, buyDrone, unlock, save, newWorld, starterCode;
+
+function toast(msg) { $("toast").textContent = msg; setTimeout(() => { if ($("toast").textContent === msg) $("toast").textContent = ""; }, 6000); }
+
+async function boot() {
+  py = await loadPyodide();
+  py.FS.writeFile("sim.py", SIM_SOURCE);
+  py.runPython(`
+import json, sim
+world = sim.World(seed=1)
+def _snap(): return json.dumps(world.snapshot())
+def api_step(): world.step(); return _snap()
+def api_run(n): world.run(n); return _snap()
+def api_deploy(code): ok = world.deploy(code); return json.dumps([ok, world.snapshot()])
+def api_buy(): ok = world.buy_drone(); return json.dumps([ok, world.snapshot()])
+def api_unlock(name): ok = world.unlock(name); return json.dumps([ok, world.snapshot()])
+def api_save(): return world.save()
+def api_load(text):
+    global world
+    world = sim.World.load(text); return _snap()
+def api_new():
+    global world
+    world = sim.World(seed=1); return _snap()
+def api_code(): return world.code
+def api_starter(): return sim.STARTER
+`);
+  const g = n => py.globals.get(n);
+  step = () => JSON.parse(g("api_step")());
+  runN = n => JSON.parse(g("api_run")(n));
+  deploy = c => JSON.parse(g("api_deploy")(c));
+  buyDrone = () => JSON.parse(g("api_buy")());
+  unlock = n => JSON.parse(g("api_unlock")(n));
+  save = () => g("api_save")();
+  newWorld = () => JSON.parse(g("api_new")());
+  starterCode = () => g("api_starter")();
+
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); } catch (e) {}
+  if (saved) {
+    snap = JSON.parse(py.globals.get("api_load")(saved.world));
+    const away = Math.min(600, Math.floor((Date.now() - saved.t) / 1000));
+    if (away >= 5) {
+      const mined0 = snap.mined_total;
+      snap = runN(away);
+      toast("While you were away (" + away + " ticks): +" + (snap.mined_total - mined0) + " ore mined");
+    }
+    $("code").value = py.globals.get("api_code")();
+  } else {
+    snap = JSON.parse(g("_snap")());
+    $("code").value = starterCode();
+  }
+  $("loading").remove();
+  render();
+}
+
+function persist() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ world: save(), t: Date.now() })); } catch (e) {}
+}
+
+function render() {
+  const s = snap, c = $("map").getContext("2d");
+  c.clearRect(0, 0, 672, 448);
+  c.strokeStyle = "#171c27"; c.lineWidth = 1;
+  for (let x = 0; x <= s.w; x++) { c.beginPath(); c.moveTo(x * CELL + .5, 0); c.lineTo(x * CELL + .5, s.h * CELL); c.stroke(); }
+  for (let y = 0; y <= s.h; y++) { c.beginPath(); c.moveTo(0, y * CELL + .5); c.lineTo(s.w * CELL, y * CELL + .5); c.stroke(); }
+  for (const [x, y, a] of s.ore_tiles) {
+    c.fillStyle = `rgba(240,176,80,${0.25 + Math.min(a, 15) / 15 * 0.6})`;
+    c.fillRect(x * CELL + 2, y * CELL + 2, CELL - 3, CELL - 3);
+  }
+  c.fillStyle = "#4a7bd0"; c.fillRect(2, 2, CELL - 3, CELL - 3);
+  c.fillStyle = "#fff"; c.font = "bold 12px sans-serif"; c.textAlign = "center"; c.fillText("B", CELL / 2, CELL / 2 + 4);
+  for (const d of s.drones) {
+    const cx = d.x * CELL + CELL / 2, cy = d.y * CELL + CELL / 2;
+    c.fillStyle = d.cargo ? "#f0b050" : "#5ac8a0";
+    c.beginPath(); c.arc(cx, cy, 8, 0, 7); c.fill();
+    c.fillStyle = "#08241a"; c.font = "10px sans-serif"; c.fillText(d.id, cx, cy + 3.5);
+  }
+  $("stats").innerHTML = `<span>Tick <b>${s.tick}</b></span><span>Ore <b>${s.ore}</b></span><span>Drones <b>${s.drones.length}/${s.max_drones}</b></span><span>CPU <b>${s.budget}</b></span>`;
+  const shop = $("shop"); shop.innerHTML = "";
+  const b = document.createElement("button");
+  b.textContent = `Buy drone (${s.drone_cost} ore)`; b.disabled = s.ore < s.drone_cost || s.drones.length >= s.max_drones;
+  b.onclick = () => { snap = buyDrone()[1]; render(); persist(); }; shop.appendChild(b);
+  for (const [name, t] of Object.entries(s.tech_info)) {
+    const u = document.createElement("button");
+    u.textContent = t.owned ? `${name} ✓` : `${name} (${t.cost} ore)`; u.title = t.desc;
+    u.disabled = t.owned || s.ore < t.cost;
+    u.onclick = () => { snap = unlock(name)[1]; render(); persist(); }; shop.appendChild(u);
+  }
+  const log = $("log"), stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+  log.innerHTML = "";
+  for (const l of s.logs) {
+    const d = document.createElement("div"); d.textContent = l;
+    if (/exceeded|Error|failed|locked/.test(l)) d.className = "err"; else if (/deployed|Unlocked/.test(l)) d.className = "ok";
+    log.appendChild(d);
+  }
+  if (stick) log.scrollTop = log.scrollHeight;
+}
+
+function tickOnce() { snap = step(); render(); if (snap.tick % 10 === 0) persist(); }
+function setRunning(on) {
+  running = on; clearInterval(timer);
+  $("run").textContent = on ? "Pause" : "Run";
+  if (on) timer = setInterval(tickOnce, 1000 / +$("speed").value);
+}
+$("run").onclick = () => setRunning(!running);
+$("stepBtn").onclick = () => { setRunning(false); tickOnce(); };
+$("speed").onchange = () => { if (running) setRunning(true); };
+$("deploy").onclick = () => { const [ok, s] = deploy($("code").value); snap = s; render(); persist(); };
+$("code").addEventListener("keydown", e => {
+  if (e.key === "Tab") { e.preventDefault(); const t = e.target, p = t.selectionStart; t.setRangeText("    ", p, t.selectionEnd, "end"); }
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("deploy").click(); }
+});
+$("resetCode").onclick = () => { $("code").value = starterCode(); };
+$("reset").onclick = () => {
+  if (!confirm("Reset the world? Your code stays in the editor.")) return;
+  setRunning(false); snap = newWorld(); $("deploy").click(); persist();
+};
+boot().catch(e => { $("loading").textContent = "Failed to load Python runtime: " + e + " (needs internet on first load)"; });
+</script>
+</body>
+</html>

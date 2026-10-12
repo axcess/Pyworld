@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pyworld MVP</title>
+<style>
+  :root { --bg:#12151c; --panel:#1b202b; --line:#2a3140; --fg:#e4e8f0; --dim:#8b95a8; --acc:#5ac8a0; --warn:#f0b050; --bad:#ef6a6a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui, sans-serif; }
+  header { padding:10px 16px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; }
+  #stats span { margin-right:14px; color:var(--dim); } #stats b { color:var(--fg); }
+  main { display:flex; gap:12px; padding:12px 16px; flex-wrap:wrap; }
+  .col { flex:1 1 420px; min-width:300px; display:flex; flex-direction:column; gap:10px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px; }
+  canvas { width:100%; height:auto; background:#0d1017; border-radius:6px; display:block; }
+  textarea { width:100%; height:300px; background:#0d1017; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:8px;
+             font:13px/1.45 ui-monospace, Menlo, Consolas, monospace; tab-size:4; resize:vertical; }
+  button { background:#2a3347; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 10px; cursor:pointer; font:inherit; }
+  button:hover:not(:disabled) { background:#37425c; } button:disabled { opacity:.45; cursor:default; }
+  button.primary { background:var(--acc); color:#08241a; border-color:var(--acc); font-weight:600; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+  #log { height:150px; overflow:auto; font:12px/1.4 ui-monospace, Menlo, Consolas, monospace; color:var(--dim); white-space:pre-wrap; }
+  #log .err { color:var(--bad); } #log .ok { color:var(--acc); }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); margin:0 0 6px; }
+  details summary { cursor:pointer; color:var(--dim); } details pre { margin:6px 0 0; font-size:12px; white-space:pre-wrap; color:var(--dim); }
+  #loading { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:10; color:var(--dim); }
+  #toast { color:var(--warn); min-height:1.4em; }
+</style>
+</head>
+<body>
+<div id="loading">Loading Python runtime (first load downloads ~10 MB)&hellip;</div>
+<header>
+  <h1>Pyworld <small style="color:var(--dim);font-weight:400">MVP</small></h1>
+  <div id="stats"></div>
+  <div id="toast"></div>
+</header>
+<main>
+  <div class="col">
+    <div class="panel"><canvas id="map" width="672" height="448"></canvas>
+      <div class="row">
+        <button id="run" class="primary">Run</button>
+        <button id="stepBtn">Step</button>
+        <label>Speed <select id="speed"><option value="2">2/s</option><option value="5" selected>5/s</option><option value="15">15/s</option><option value="40">40/s</option></select></label>
+        <button id="reset" style="margin-left:auto">Reset world</button>
+      </div>
+    </div>
+    <div class="panel"><h2>Upgrades</h2><div id="shop" class="row" style="margin-top:0"></div></div>
+    <div class="panel"><h2>Log</h2><div id="log"></div></div>
+  </div>
+  <div class="col">
+    <div class="panel">
+      <h2>Your code</h2>
+      <textarea id="code" spellcheck="false"></textarea>
+      <div class="row"><button id="deploy" class="primary">Deploy (Ctrl+Enter)</button><button id="resetCode">Restore starter</button></div>
+    </div>
+    <div class="panel"><details open><summary>API cheat sheet</summary><pre>def tick(drone):            # runs for every drone, every tick
+  drone.x, drone.y, drone.cargo, drone.capacity, drone.id
+  drone.memory               # dict that persists for this drone
+  drone.at_base()   drone.ore_here()
+  drone.move(dx, dy)         # one step, no diagonals
+  drone.move_toward(x, y)
+  drone.mine()  drone.deposit()   # base is at (0, 0)
+  drone.scan()               # LOCKED: [(x, y, amount), ...] within 6 tiles
+
+def colony_tick(colony):    # optional, runs once per tick
+  colony.ore, colony.drones, colony.tick, colony.memory
+  colony.buy_drone()   colony.has("scan")
+
+Rules: 1 action per drone per tick. Each drone gets a CPU budget of traced
+lines per tick; blow it and that drone idles. Only `math` can be imported.</pre></details></div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const SIM_SOURCE = __SIM_PY_JSON__;
+const SAVE_KEY = "pyworld-mvp-save-v1";
+const CELL = 28;
+const $ = id => document.getElementById(id);
+let py, snap = null, timer = null, running = false;
+let step, runN, deploy, buyDrone, unlock, save, newWorld, starterCode;
+
+function toast(msg) { $("toast").textContent = msg; setTimeout(() => { if ($("toast").textContent === msg) $("toast").textContent = ""; }, 6000); }
+
+async function boot() {
+  py = await loadPyodide();
+  py.FS.writeFile("sim.py", SIM_SOURCE);
+  py.runPython(`
+import json, sim
+world = sim.World(seed=1)
+def _snap(): return json.dumps(world.snapshot())
+def api_step(): world.step(); return _snap()
+def api_run(n): world.run(n); return _snap()
+def api_deploy(code): ok = world.deploy(code); return json.dumps([ok, world.snapshot()])
+def api_buy(): ok = world.buy_drone(); return json.dumps([ok, world.snapshot()])
+def api_unlock(name): ok = world.unlock(name); return json.dumps([ok, world.snapshot()])
+def api_save(): return world.save()
+def api_load(text):
+    global world
+    world = sim.World.load(text); return _snap()
+def api_new():
+    global world
+    world = sim.World(seed=1); return _snap()
+def api_code(): return world.code
+def api_starter(): return sim.STARTER
+`);
+  const g = n => py.globals.get(n);
+  step = () => JSON.parse(g("api_step")());
+  runN = n => JSON.parse(g("api_run")(n));
+  deploy = c => JSON.parse(g("api_deploy")(c));
+  buyDrone = () => JSON.parse(g("api_buy")());
+  unlock = n => JSON.parse(g("api_unlock")(n));
+  save = () => g("api_save")();
+  newWorld = () => JSON.parse(g("api_new")());
+  starterCode = () => g("api_starter")();
+
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); } catch (e) {}
+  if (saved) {
+    snap = JSON.parse(py.globals.get("api_load")(saved.world));
+    const away = Math.min(600, Math.floor((Date.now() - saved.t) / 1000));
+    if (away >= 5) {
+      const mined0 = snap.mined_total;
+      snap = runN(away);
+      toast("While you were away (" + away + " ticks): +" + (snap.mined_total - mined0) + " ore mined");
+    }
+    $("code").value = py.globals.get("api_code")();
+  } else {
+    snap = JSON.parse(g("_snap")());
+    $("code").value = starterCode();
+  }
+  $("loading").remove();
+  render();
+}
+
+function persist() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ world: save(), t: Date.now() })); } catch (e) {}
+}
+
+function render() {
+  const s = snap, c = $("map").getContext("2d");
+  c.clearRect(0, 0, 672, 448);
+  c.strokeStyle = "#171c27"; c.lineWidth = 1;
+  for (let x = 0; x <= s.w; x++) { c.beginPath(); c.moveTo(x * CELL + .5, 0); c.lineTo(x * CELL + .5, s.h * CELL); c.stroke(); }
+  for (let y = 0; y <= s.h; y++) { c.beginPath(); c.moveTo(0, y * CELL + .5); c.lineTo(s.w * CELL, y * CELL + .5); c.stroke(); }
+  for (const [x, y, a] of s.ore_tiles) {
+    c.fillStyle = `rgba(240,176,80,${0.25 + Math.min(a, 15) / 15 * 0.6})`;
+    c.fillRect(x * CELL + 2, y * CELL + 2, CELL - 3, CELL - 3);
+  }
+  c.fillStyle = "#4a7bd0"; c.fillRect(2, 2, CELL - 3, CELL - 3);
+  c.fillStyle = "#fff"; c.font = "bold 12px sans-serif"; c.textAlign = "center"; c.fillText("B", CELL / 2, CELL / 2 + 4);
+  for (const d of s.drones) {
+    const cx = d.x * CELL + CELL / 2, cy = d.y * CELL + CELL / 2;
+    c.fillStyle = d.cargo ? "#f0b050" : "#5ac8a0";
+    c.beginPath(); c.arc(cx, cy, 8, 0, 7); c.fill();
+    c.fillStyle = "#08241a"; c.font = "10px sans-serif"; c.fillText(d.id, cx, cy + 3.5);
+  }
+  $("stats").innerHTML = `<span>Tick <b>${s.tick}</b></span><span>Ore <b>${s.ore}</b></span><span>Drones <b>${s.drones.length}/${s.max_drones}</b></span><span>CPU <b>${s.budget}</b></span>`;
+  const shop = $("shop"); shop.innerHTML = "";
+  const b = document.createElement("button");
+  b.textContent = `Buy drone (${s.drone_cost} ore)`; b.disabled = s.ore < s.drone_cost || s.drones.length >= s.max_drones;
+  b.onclick = () => { snap = buyDrone()[1]; render(); persist(); }; shop.appendChild(b);
+  for (const [name, t] of Object.entries(s.tech_info)) {
+    const u = document.createElement("button");
+    u.textContent = t.owned ? `${name} ✓` : `${name} (${t.cost} ore)`; u.title = t.desc;
+    u.disabled = t.owned || s.ore < t.cost;
+    u.onclick = () => { snap = unlock(name)[1]; render(); persist(); }; shop.appendChild(u);
+  }
+  const log = $("log"), stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+  log.innerHTML = "";
+  for (const l of s.logs) {
+    const d = document.createElement("div"); d.textContent = l;
+    if (/exceeded|Error|failed|locked/.test(l)) d.className = "err"; else if (/deployed|Unlocked/.test(l)) d.className = "ok";
+    log.appendChild(d);
+  }
+  if (stick) log.scrollTop = log.scrollHeight;
+}
+
+function tickOnce() { snap = step(); render(); if (snap.tick % 10 === 0) persist(); }
+function setRunning(on) {
+  running = on; clearInterval(timer);
+  $("run").textContent = on ? "Pause" : "Run";
+  if (on) timer = setInterval(tickOnce, 1000 / +$("speed").value);
+}
+$("run").onclick = () => setRunning(!running);
+$("stepBtn").onclick = () => { setRunning(false); tickOnce(); };
+$("speed").onchange = () => { if (running) setRunning(true); };
+$("deploy").onclick = () => { const [ok, s] = deploy($("code").value); snap = s; render(); persist(); };
+$("code").addEventListener("keydown", e => {
+  if (e.key === "Tab") { e.preventDefault(); const t = e.target, p = t.selectionStart; t.setRangeText("    ", p, t.selectionEnd, "end"); }
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("deploy").click(); }
+});
+$("resetCode").onclick = () => { $("code").value = starterCode(); };
+$("reset").onclick = () => {
+  if (!confirm("Reset the world? Your code stays in the editor.")) return;
+  setRunning(false); snap = newWorld(); $("deploy").click(); persist();
+};
+boot().catch(e => { $("loading").textContent = "Failed to load Python runtime: " + e + " (needs internet on first load)"; });
+</script>
+</body>
+</html>
