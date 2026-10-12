@@ -1,20 +1,24 @@
-# Pyworld (MVP candidate)
+# Pyworld
 
-Single-player incremental colony sim where your Python is the only way to act. Drones mine ore; you write the code that drives them, then spend ore on drones and API/CPU upgrades.
+Single-player, Screeps-style colony sandbox where **your Python is the only way to act**. Drones mine ore; you write the `tick(drone)` code that drives them, then spend ore on more drones and API/CPU upgrades. An in-game objectives checklist teaches the basics (functions, `if/elif`, comparisons, lists, dictionaries) inside the live world, then leaves you in a sandbox chasing a high score: ore delivered in the last 100 ticks.
 
 ## Try it
-Open `dist/index.html` in Chrome (double-click works, including from a downloaded folder). The first load needs internet: it fetches the Pyodide Python runtime (~10 MB) from a CDN, and the browser caches it afterwards.
+Download `dist/index.html` and double-click it (Chrome or Edge). It is one ~19 MB file that **works offline**: the Python runtime (Pyodide) and the code editor are built in, and nothing is fetched from the network.
 
-1. Press **Run** and watch the starter script mine.
-2. Edit the code, **Deploy** (Ctrl+Enter).
-3. Spend ore: more drones, `scan` (unlocks `drone.scan()`), `cpu` (bigger per-tick budget).
-4. Progress is saved in the browser. Closing the tab and returning simulates up to 600 missed ticks.
+1. Follow the objective on the left: edit the code, **Deploy** (Ctrl+Enter), then **▶ Run**.
+2. Spend ore in the Shop: more drones, `scan` (unlocks `drone.scan()`), `cpu` (bigger per-tick budget).
+3. Progress saves in the browser. Coming back simulates up to 600 missed ticks. **⋯** has save export/import and reset.
+
+## Safety rails for experimenting
+- Errors show the line number, highlight it in the editor, and give a plain-English hint.
+- Each drone gets a CPU budget of traced lines per tick, so `while True:` just idles that drone.
+- Python runs in a Web Worker with a 3-second watchdog. Anything slower (for example `sum(range(10**10))`) gets stopped, Python restarts, the game pauses, and the drones go back to your previous working code. Your editor text is kept.
 
 ## Layout
-- `pyworld/sim.py`: deterministic sim core and sandbox (pure Python, no dependencies)
-- `web/index.template.html`: the client; `python3 build.py` inlines the sim into `dist/index.html`
-- `tests/`: `python3 -m pytest tests`
+- `pyworld/sim.py`: deterministic sim core, sandbox, objectives and score (pure Python, no dependencies)
+- `web/index.template.html`: the client; `web/worker.js`: hosts Pyodide in a worker
+- `build.py`: downloads pinned Pyodide and CodeMirror tarballs from npm into `.cache/` (git-ignored; sha256-checked) and inlines everything into `dist/index.html`
+- `tests/`: `python3 -m pytest tests`; browser test: `npm install playwright-core && node tests/browser/e2e.mjs`
 
 ## Known limits
-- Sandbox is restricted builtins plus a traced-line CPU budget. It runs on the student's own machine in the browser, but it is not hardened for a shared server.
-- Python runs on the main thread, so a budget-exhausting script slows the page slightly; moving it to a Web Worker is the next step.
+- The sandbox is restricted builtins plus a CPU budget and a watchdog. Fine on your own machine; not hardened for a shared server.

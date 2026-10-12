@@ -1,4 +1,17 @@
-# Pyworld: handoff for the polish phase
+# Pyworld: handoff
+
+## Session 2 update (read first; older notes below still apply where not contradicted)
+- **Direction confirmed by the user: Screeps-like, one persistent world, NOT a level/campaign game.** A level-based campaign was started and rejected; don't reintroduce levels. Teaching happens through an in-world **objectives checklist** (`OBJECTIVES` in `sim.py`); afterwards it's an open sandbox (Shapez-like) where the goal is a **high score** = ore delivered in the last 100 ticks (`best_rate`).
+- Audience: just the user for now; students later. New worlds start with an empty `def tick(drone): pass` (`STARTER`); `EXAMPLE` is the old full miner (used by tests).
+- **No threats/enemies.** Next depth the user wants: **bigger scrolling map, structures (build things), drone roles/bodies**.
+- Delivery: single `dist/index.html`, **fully offline** (Pyodide 0.26.4 + CodeMirror 5.65.18 base64-inlined, ~19 MB; size is fine per the user). GitHub Pages still not wanted.
+- Done this session: Web Worker + 3 s watchdog with restart/rollback to the previous code; error line numbers and hints (`describe()`), editor line highlighting; `print()` goes to the game log; `drone.right/left/up/down()`; `walls` support in the sim (no rocks generated yet); CodeMirror editor; new canvas art (vector drones in Okabe-Ito colours, crystals, base, floating +ore); responsive layout (phone order: objective, map, code); tile hover coordinates; drone inspector (memory); save export/import; objectives moved `scan` early because the first patch's centre tile runs dry and stalls the `EXAMPLE` miner.
+- Verify: `python3 -m pytest tests` (20 tests) and `node tests/browser/e2e.mjs` (needs `playwright-core`; checks zero network requests from file://, objectives, errors, runaway recovery, reload, phone layout).
+- Branch this session: `claude/eager-bell-bwpr3d`.
+
+---
+
+# Original handoff (session 1)
 
 You are picking up a working prototype. Goal now: **polish it into something worth playtesting repeatedly**, without breaking the architecture below. Read this whole file, then `README.md`, then `pyworld/sim.py` (~390 lines) before changing anything.
 

@@ -3,201 +3,845 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pyworld MVP</title>
+<title>Pyworld</title>
+<style>__CM_CSS__</style>
 <style>
-  :root { --bg:#12151c; --panel:#1b202b; --line:#2a3140; --fg:#e4e8f0; --dim:#8b95a8; --acc:#5ac8a0; --warn:#f0b050; --bad:#ef6a6a; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui, sans-serif; }
-  header { padding:10px 16px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; }
-  header h1 { font-size:18px; margin:0; }
-  #stats span { margin-right:14px; color:var(--dim); } #stats b { color:var(--fg); }
-  main { display:flex; gap:12px; padding:12px 16px; flex-wrap:wrap; }
-  .col { flex:1 1 420px; min-width:300px; display:flex; flex-direction:column; gap:10px; }
-  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px; }
-  canvas { width:100%; height:auto; background:#0d1017; border-radius:6px; display:block; }
-  textarea { width:100%; height:300px; background:#0d1017; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:8px;
-             font:13px/1.45 ui-monospace, Menlo, Consolas, monospace; tab-size:4; resize:vertical; }
-  button { background:#2a3347; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 10px; cursor:pointer; font:inherit; }
-  button:hover:not(:disabled) { background:#37425c; } button:disabled { opacity:.45; cursor:default; }
-  button.primary { background:var(--acc); color:#08241a; border-color:var(--acc); font-weight:600; }
-  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
-  #log { height:150px; overflow:auto; font:12px/1.4 ui-monospace, Menlo, Consolas, monospace; color:var(--dim); white-space:pre-wrap; }
-  #log .err { color:var(--bad); } #log .ok { color:var(--acc); }
-  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); margin:0 0 6px; }
-  details summary { cursor:pointer; color:var(--dim); } details pre { margin:6px 0 0; font-size:12px; white-space:pre-wrap; color:var(--dim); }
-  #loading { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:10; color:var(--dim); }
-  #toast { color:var(--warn); min-height:1.4em; }
+  :root {
+    --bg:#0e131d; --panel:#151c2a; --panel2:#1b2436; --line:#26314a; --fg:#e8edf6; --dim:#8f9bb3;
+    --acc:#4ade80; --acc-ink:#062b14; --gold:#f5c04a; --blue:#60a5fa; --bad:#f87171; --violet:#c4b5fd;
+    --mono: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+    --emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button { font:inherit; color:var(--fg); background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer; }
+  button:hover:not(:disabled) { background:#25304a; border-color:#34415f; }
+  button:disabled { opacity:.45; cursor:default; }
+  button.primary { background:var(--acc); color:var(--acc-ink); border-color:var(--acc); font-weight:650; }
+  button.primary:hover:not(:disabled) { background:#6ee7a0; }
+  kbd { font:11px var(--mono); opacity:.7; margin-left:4px; }
+  h2 { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin:0 0 8px; font-weight:650; }
+  code { font-family:var(--mono); font-size:.92em; background:#0b1018; border:1px solid var(--line); border-radius:4px; padding:0 4px; }
+
+  /* top bar */
+  .top { display:flex; align-items:center; gap:16px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:5; flex-wrap:wrap; }
+  .brand { font-size:18px; font-weight:750; display:flex; gap:8px; align-items:center; }
+  .brand .e { font-family:var(--emoji); }
+  .stats { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { display:flex; align-items:baseline; gap:6px; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:3px 12px; }
+  .chip .e { font-family:var(--emoji); align-self:center; }
+  .chip b { font-variant-numeric:tabular-nums; font-size:15px; }
+  .chip small { color:var(--dim); }
+  .chip.score b#sScore { color:var(--gold); }
+  .chip.bump { animation:bump .5s; }
+  @keyframes bump { 30% { transform:scale(1.12); border-color:var(--gold); } }
+  .controls { display:flex; gap:8px; align-items:center; margin-left:auto; flex-wrap:wrap; }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .seg button { border:0; border-radius:0; padding:6px 10px; background:var(--panel2); }
+  .seg button.on { background:#2d3b5c; color:#fff; }
+
+  /* layout */
+  .layout { display:grid; gap:14px; padding:14px 16px; grid-template-columns: minmax(280px, 320px) minmax(420px, 1.5fr) minmax(360px, 1fr); grid-template-areas: "side center right"; align-items:start; }
+  .side { grid-area:side; } .center { grid-area:center; } .right { grid-area:right; }
+  .side, .center, .right { display:flex; flex-direction:column; gap:14px; min-width:0; }
+  @media (max-width: 1250px) {
+    .layout { grid-template-columns: minmax(0, 1.2fr) minmax(340px, 1fr); grid-template-areas: "center right" "side right"; }
+  }
+  @media (max-width: 860px) {
+    .layout { display:flex; flex-direction:column; align-items:stretch; padding:12px; }
+    .side, .center, .right { display:contents; }
+    #objCard { order:1; } .mapcard { order:2; } .editor-card { order:3; } .shop-card { order:4; } .objlist-card { order:5; } .log-card { order:6; }
+    .top { padding:8px 12px; } .controls { margin-left:0; }
+  }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; min-width:0; max-width:100%; }
+  .CodeMirror { max-width:100%; }
+
+  /* objective */
+  .obj-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .obj-top h2 { margin:0; }
+  .progress { height:6px; background:#0b1018; border-radius:99px; overflow:hidden; margin:2px 0 12px; }
+  .progress i { display:block; height:100%; background:linear-gradient(90deg, var(--acc), var(--gold)); transition:width .6s; }
+  .obj-title { font-size:18px; font-weight:700; margin:0 0 8px; }
+  .obj-body p { margin:0 0 10px; }
+  .obj-body pre, .docs pre { background:#0b1018; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:0 0 10px; overflow:auto; font:12.5px/1.5 var(--mono); }
+  .obj-body pre code, .docs pre code { background:none; border:0; padding:0; }
+  .reward { color:var(--gold); font-size:12px; white-space:nowrap; }
+  details.hint { background:#141b28; border:1px dashed #34415f; border-radius:8px; padding:6px 10px; }
+  details.hint summary { cursor:pointer; color:var(--blue); }
+  #objList { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  #objList li { display:flex; gap:8px; align-items:center; padding:4px 6px; border-radius:6px; color:var(--dim); cursor:pointer; }
+  #objList li:hover { background:var(--panel2); }
+  #objList li .e { font-family:var(--emoji); width:18px; text-align:center; }
+  #objList li.done { color:var(--fg); }
+  #objList li.cur { color:#fff; background:#1d2a40; font-weight:600; }
+  #objList li.viewing { outline:1px solid #34415f; }
+
+  /* shop */
+  .shop-item { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
+  .shop-item:first-of-type { border-top:0; padding-top:0; }
+  .shop-item .e { font-family:var(--emoji); font-size:22px; width:30px; text-align:center; }
+  .shop-item .what { flex:1; min-width:0; }
+  .shop-item .what b { display:block; }
+  .shop-item .what small { color:var(--dim); display:block; line-height:1.3; }
+  .shop-item button { white-space:nowrap; }
+  .owned { color:var(--acc); font-weight:600; }
+
+  /* map */
+  .mapcard { padding:10px; position:relative; }
+  #map { display:block; width:100%; height:auto; border-radius:8px; cursor:pointer; touch-action:manipulation; }
+  .maphead { display:flex; justify-content:space-between; align-items:center; margin:0 4px 8px; }
+  .maphead h2 { margin:0; }
+  .legend { color:var(--dim); font-size:12px; display:flex; gap:12px; flex-wrap:wrap; }
+  .legend .e { font-family:var(--emoji); }
+  #inspector { position:absolute; right:18px; top:46px; width:240px; background:rgba(14,19,29,.95); border:1px solid #34415f; border-radius:10px; padding:10px 12px; font-size:13px; box-shadow:0 8px 30px rgba(0,0,0,.4); }
+  #inspector pre { margin:6px 0 0; max-height:160px; overflow:auto; font:12px/1.4 var(--mono); color:var(--violet); white-space:pre-wrap; }
+  #inspector .x { position:absolute; right:6px; top:4px; border:0; background:none; padding:2px 6px; color:var(--dim); }
+
+  /* log */
+  #log { height:170px; overflow:auto; font:12.5px/1.5 var(--mono); color:var(--dim); }
+  #log div { padding:1px 0; white-space:pre-wrap; word-break:break-word; }
+  #log .err { color:var(--bad); } #log .ok { color:var(--acc); } #log .print { color:var(--blue); } #log .goal { color:var(--gold); }
+
+  /* editor */
+  .edhead { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .edhead h2 { margin:0; margin-right:auto; }
+  #dirty { color:var(--gold); font-size:12px; }
+  .CodeMirror { height:440px; border:1px solid var(--line); border-radius:8px; background:#0b1018; color:#e8edf6; font:13.5px/1.55 var(--mono); }
+  @media (max-width: 860px) { .CodeMirror { height:340px; } }
+  .CodeMirror-gutters { background:#0d131e; border-right:1px solid var(--line); }
+  .CodeMirror-linenumber { color:#4f5d78; }
+  .CodeMirror-cursor { border-left:2px solid var(--acc); }
+  .CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected { background:#24365a !important; }
+  .CodeMirror-activeline-background { background:#131b29; }
+  .CodeMirror-matchingbracket { color:var(--acc) !important; text-decoration:underline; }
+  .cm-s-default .cm-keyword { color:#c792ea; } .cm-s-default .cm-def { color:#82aaff; }
+  .cm-s-default .cm-variable-2 { color:#e8edf6; } .cm-s-default .cm-builtin { color:#7dd3fc; }
+  .cm-s-default .cm-number { color:#f78c6c; } .cm-s-default .cm-string { color:#c3e88d; }
+  .cm-s-default .cm-comment { color:#6b7a96; font-style:italic; } .cm-s-default .cm-operator { color:#89ddff; }
+  .cm-s-default .cm-property { color:#ffcb6b; } .cm-s-default .cm-variable { color:#e8edf6; }
+  .cm-s-default .cm-meta { color:#ffcb6b; } .cm-s-default .cm-bracket { color:#a6b3cc; }
+  .cm-error-line { background:rgba(248,113,113,.16) !important; }
+  .cm-error-gutter { color:var(--bad) !important; font-weight:700; }
+  #errorBox { margin-top:10px; border:1px solid rgba(248,113,113,.5); background:rgba(248,113,113,.08); border-radius:8px; padding:10px 12px; }
+  #errorBox .head { color:var(--bad); font-weight:700; }
+  #errorBox .head small { color:var(--dim); font-weight:400; margin-left:6px; }
+  #errorBox .msg { font-family:var(--mono); font-size:13px; margin:4px 0; word-break:break-word; }
+  #errorBox .hint { color:#cbd5e1; }
+  #errorBox .stale { color:var(--dim); font-size:12px; margin-top:4px; }
+  .okbox { margin-top:10px; color:var(--acc); font-size:13px; }
+
+  /* overlays, toasts, dialogs */
+  .overlay { position:fixed; inset:0; background:rgba(8,11,18,.82); display:flex; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(3px); padding:16px; }
+  .overlay[hidden] { display:none; }
+  .modal { background:var(--panel); border:1px solid #34415f; border-radius:14px; padding:22px 24px; max-width:460px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  .modal h3 { margin:0 0 8px; font-size:20px; }
+  .modal .big { font-family:var(--emoji); font-size:40px; line-height:1; margin-bottom:10px; }
+  .modal p { color:#cbd5e1; margin:0 0 10px; }
+  .modal ul { margin:0 0 12px; padding-left:20px; color:#cbd5e1; }
+  .bar { height:6px; background:#0b1018; border-radius:99px; overflow:hidden; margin-top:14px; }
+  .bar i { display:block; height:100%; width:40%; background:var(--acc); border-radius:99px; animation:slide 1.2s infinite ease-in-out; }
+  @keyframes slide { 0% { transform:translateX(-100%); } 100% { transform:translateX(250%); } }
+  #toasts { position:fixed; bottom:16px; right:16px; display:flex; flex-direction:column; gap:8px; z-index:60; align-items:flex-end; pointer-events:none; }
+  @media (max-width: 860px) { #toasts { left:12px; right:12px; align-items:stretch; } }
+  .toast { background:#1d2a40; border:1px solid #34415f; border-radius:10px; padding:10px 16px; box-shadow:0 10px 30px rgba(0,0,0,.4); animation:pop .3s; max-width:90vw; }
+  .toast.goal { border-color:var(--gold); background:#2a2412; }
+  .toast.bad { border-color:var(--bad); }
+  @keyframes pop { from { transform:translateY(12px); opacity:0; } }
+  dialog { background:var(--panel); color:var(--fg); border:1px solid #34415f; border-radius:14px; padding:0; max-width:min(760px, 94vw); width:100%; }
+  dialog::backdrop { background:rgba(8,11,18,.7); }
+  dialog .dhead { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--panel); }
+  dialog .dhead h3 { margin:0; }
+  dialog .dbody { padding:16px 18px; max-height:75vh; overflow:auto; }
+  .docs h4 { margin:14px 0 6px; color:var(--blue); } .docs h4:first-child { margin-top:0; }
+  .docs table { border-collapse:collapse; width:100%; margin-bottom:6px; }
+  .docs td { border-top:1px solid var(--line); padding:5px 8px; vertical-align:top; }
+  .docs td:first-child { white-space:nowrap; }
+  .docs .locked { color:var(--dim); }
+  .menu-list { display:flex; flex-direction:column; gap:10px; }
+  .menu-list button { text-align:left; }
+  .menu-list small { display:block; color:var(--dim); }
 </style>
 </head>
 <body>
-<div id="loading">Loading Python runtime (first load downloads ~10 MB)&hellip;</div>
-<header>
-  <h1>Pyworld <small style="color:var(--dim);font-weight:400">MVP</small></h1>
-  <div id="stats"></div>
-  <div id="toast"></div>
+<div id="boot" class="overlay"><div class="modal" style="text-align:center">
+  <div class="big">🤖</div><h3>Pyworld</h3>
+  <p id="bootMsg">Unpacking Python…</p><div class="bar"><i></i></div>
+</div></div>
+
+<header class="top">
+  <div class="brand"><span class="e">🤖</span> Pyworld</div>
+  <div class="stats">
+    <div class="chip" id="cOre" title="Ore you can spend in the Shop"><span class="e">💎</span><b id="sOre">0</b><small>ore</small></div>
+    <div class="chip score" id="cScore" title="Score: ore delivered in the last 100 ticks"><span class="e">🏆</span><b id="sScore">0</b><small>score · best <b id="sBest">0</b></small></div>
+    <div class="chip" title="Drones you own"><span class="e">🤖</span><b id="sDrones">1/8</b><small>drones</small></div>
+    <div class="chip" title="Lines of your code each drone may run per tick"><span class="e">⚙️</span><b id="sCpu">200</b><small>CPU</small></div>
+    <div class="chip" title="Ticks (turns) so far"><span class="e">⏱️</span><b id="sTick">0</b><small>tick</small></div>
+  </div>
+  <div class="controls">
+    <button id="run" class="primary" title="Start or pause time (Space when not typing)">▶ Run</button>
+    <button id="step" title="Advance one tick">Step</button>
+    <div class="seg" id="speed" title="Ticks per second">
+      <button data-tps="2">2/s</button><button data-tps="5" class="on">5/s</button><button data-tps="15">15/s</button><button data-tps="40">40/s</button>
+    </div>
+    <button id="docsBtn">📖 API</button>
+    <button id="menuBtn" title="Save, reset">⋯</button>
+  </div>
 </header>
-<main>
-  <div class="col">
-    <div class="panel"><canvas id="map" width="672" height="448"></canvas>
-      <div class="row">
-        <button id="run" class="primary">Run</button>
-        <button id="stepBtn">Step</button>
-        <label>Speed <select id="speed"><option value="2">2/s</option><option value="5" selected>5/s</option><option value="15">15/s</option><option value="40">40/s</option></select></label>
-        <button id="reset" style="margin-left:auto">Reset world</button>
-      </div>
+
+<main class="layout">
+  <aside class="side">
+    <section class="card" id="objCard"></section>
+    <section class="card shop-card"><h2>🛒 Shop</h2><div id="shop"></div></section>
+    <section class="card objlist-card"><h2>Objectives</h2><ol id="objList"></ol></section>
+  </aside>
+  <section class="center">
+    <div class="card mapcard">
+      <div class="maphead"><h2>Colony</h2>
+        <div class="legend"><span><span class="e">🏠</span> base (0, 0)</span><span id="hover">hover a tile to see its (x, y)</span></div></div>
+      <canvas id="map" aria-label="Colony map"></canvas>
+      <div id="inspector" hidden></div>
     </div>
-    <div class="panel"><h2>Upgrades</h2><div id="shop" class="row" style="margin-top:0"></div></div>
-    <div class="panel"><h2>Log</h2><div id="log"></div></div>
-  </div>
-  <div class="col">
-    <div class="panel">
-      <h2>Your code</h2>
+    <div class="card log-card"><h2>Log</h2><div id="log" aria-live="polite"></div></div>
+  </section>
+  <section class="right">
+    <div class="card editor-card">
+      <div class="edhead"><h2>Your code</h2><span id="dirty" hidden>● not deployed yet</span>
+        <button id="deploy" class="primary" title="Load this code into your drones">Deploy<kbd>Ctrl+Enter</kbd></button></div>
       <textarea id="code" spellcheck="false"></textarea>
-      <div class="row"><button id="deploy" class="primary">Deploy (Ctrl+Enter)</button><button id="resetCode">Restore starter</button></div>
+      <div id="errorBox" hidden></div>
     </div>
-    <div class="panel"><details open><summary>API cheat sheet</summary><pre>def tick(drone):            # runs for every drone, every tick
-  drone.x, drone.y, drone.cargo, drone.capacity, drone.id
-  drone.memory               # dict that persists for this drone
-  drone.at_base()   drone.ore_here()
-  drone.move(dx, dy)         # one step, no diagonals
-  drone.move_toward(x, y)
-  drone.mine()  drone.deposit()   # base is at (0, 0)
-  drone.scan()               # LOCKED: [(x, y, amount), ...] within 6 tiles
-
-def colony_tick(colony):    # optional, runs once per tick
-  colony.ore, colony.drones, colony.tick, colony.memory
-  colony.buy_drone()   colony.has("scan")
-
-Rules: 1 action per drone per tick. Each drone gets a CPU budget of traced
-lines per tick; blow it and that drone idles. Only `math` can be imported.</pre></details></div>
-  </div>
+  </section>
 </main>
 
-<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<div id="toasts"></div>
+
+<div id="runaway" class="overlay" hidden><div class="modal">
+  <div class="big">⏱️</div><h3>Your code took too long</h3>
+  <p id="runawayWhy"></p>
+  <ul>
+    <li>A <code>while</code> loop whose condition never becomes <code>False</code></li>
+    <li>A huge number like <code>range(10**9)</code> or <code>"x" * 10**9</code></li>
+  </ul>
+  <p id="runawayWhat"></p>
+  <div class="bar" id="runawayBar"><i></i></div>
+  <div style="text-align:right;margin-top:14px"><button id="runawayOk" class="primary" hidden>OK, let me fix it</button></div>
+</div></div>
+
+<dialog id="docs"><div class="dhead"><h3>📖 API reference</h3><button data-close>✕</button></div><div class="dbody docs" id="docsBody"></div></dialog>
+<dialog id="menu" style="max-width:420px"><div class="dhead"><h3>Game</h3><button data-close>✕</button></div><div class="dbody menu-list">
+  <button id="mStarter">Restore starter code<small>Puts the empty starter into the editor (not deployed)</small></button>
+  <button id="mExport">Download save file<small>Back up your colony and code as a .json file</small></button>
+  <button id="mImport">Load save file<small>Replace this colony with one from a .json file</small></button>
+  <button id="mReset">Reset world<small>Start a brand new colony. Your editor code stays.</small></button>
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
+</div></dialog>
+
+__PYODIDE_ASSETS__
+<script id="workerSrc" type="text/js-worker">__WORKER_JS__</script>
+<script>__CM_JS__</script>
 <script>
-const SIM_SOURCE = __SIM_PY_JSON__;
-const SAVE_KEY = "pyworld-mvp-save-v1";
-const CELL = 28;
-const $ = id => document.getElementById(id);
-let py, snap = null, timer = null, running = false;
-let step, runN, deploy, buyDrone, unlock, save, newWorld, starterCode;
+"use strict";
+const PY_SOURCES = __PY_SOURCES_JSON__;
+const SAVE_KEY = "pyworld-save-v2", OLD_SAVE_KEY = "pyworld-mvp-save-v1", DRAFT_KEY = "pyworld-draft-v2", PREFS_KEY = "pyworld-prefs-v2";
+const WATCHDOG_MS = 3000;     // a single request taking longer than this is a runaway script
+const MAX_AWAY_TICKS = 600;   // offline progress cap (1 tick per second away)
+const $ = s => document.querySelector(s);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
 
-function toast(msg) { $("toast").textContent = msg; setTimeout(() => { if ($("toast").textContent === msg) $("toast").textContent = ""; }, 6000); }
-
-async function boot() {
-  py = await loadPyodide();
-  py.FS.writeFile("sim.py", SIM_SOURCE);
-  py.runPython(`
-import json, sim
-world = sim.World(seed=1)
-def _snap(): return json.dumps(world.snapshot())
-def api_step(): world.step(); return _snap()
-def api_run(n): world.run(n); return _snap()
-def api_deploy(code): ok = world.deploy(code); return json.dumps([ok, world.snapshot()])
-def api_buy(): ok = world.buy_drone(); return json.dumps([ok, world.snapshot()])
-def api_unlock(name): ok = world.unlock(name); return json.dumps([ok, world.snapshot()])
-def api_save(): return world.save()
-def api_load(text):
-    global world
-    world = sim.World.load(text); return _snap()
-def api_new():
-    global world
-    world = sim.World(seed=1); return _snap()
-def api_code(): return world.code
-def api_starter(): return sim.STARTER
-`);
-  const g = n => py.globals.get(n);
-  step = () => JSON.parse(g("api_step")());
-  runN = n => JSON.parse(g("api_run")(n));
-  deploy = c => JSON.parse(g("api_deploy")(c));
-  buyDrone = () => JSON.parse(g("api_buy")());
-  unlock = n => JSON.parse(g("api_unlock")(n));
-  save = () => g("api_save")();
-  newWorld = () => JSON.parse(g("api_new")());
-  starterCode = () => g("api_starter")();
-
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); } catch (e) {}
-  if (saved) {
-    snap = JSON.parse(py.globals.get("api_load")(saved.world));
-    const away = Math.min(600, Math.floor((Date.now() - saved.t) / 1000));
-    if (away >= 5) {
-      const mined0 = snap.mined_total;
-      snap = runN(away);
-      toast("While you were away (" + away + " ticks): +" + (snap.mined_total - mined0) + " ore mined");
-    }
-    $("code").value = py.globals.get("api_code")();
-  } else {
-    snap = JSON.parse(g("_snap")());
-    $("code").value = starterCode();
+// ---------------------------------------------------------------- engine (worker + watchdog)
+class Runaway extends Error {}
+class Engine {
+  constructor(files) { this.files = files; this.seq = 0; this.queue = Promise.resolve(); this.pending = null; }
+  async start() {
+    const src = document.getElementById("workerSrc").textContent;
+    this.worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+    this.worker.onmessage = ({ data }) => {
+      const p = this.pending;
+      if (!p || p.id !== data.id) return;
+      clearTimeout(p.timer); this.pending = null;
+      data.ok ? p.resolve(data.result) : p.reject(new Error(data.error));
+    };
+    this.worker.onerror = e => { if (this.pending) { clearTimeout(this.pending.timer); this.pending.reject(new Error(e.message || "worker error")); this.pending = null; } };
+    await this._send("init", { files: this.files, sources: PY_SOURCES }, 120000);
   }
-  $("loading").remove();
+  // Requests run one at a time, so the watchdog only times the request that is actually running.
+  call(cmd, args, timeout = WATCHDOG_MS) {
+    const run = () => this._send(cmd, args, timeout);
+    const p = this.queue.then(run, run);
+    this.queue = p.catch(() => {});
+    return p;
+  }
+  _send(cmd, args, timeout) {
+    return new Promise((resolve, reject) => {
+      const id = ++this.seq;
+      const timer = setTimeout(() => { this.pending = null; this.worker.terminate(); reject(new Runaway(cmd)); }, timeout);
+      this.pending = { id, resolve, reject, timer };
+      this.worker.postMessage({ id, cmd, args });
+    });
+  }
+  async restart() { try { this.worker.terminate(); } catch (e) {} this.queue = Promise.resolve(); await this.start(); }
+}
+
+function assetFiles() {
+  const files = {};
+  for (const el of document.querySelectorAll("script[data-asset]")) {
+    const bin = atob(el.textContent.trim()), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    files[el.dataset.asset] = new Blob([bytes]);
+    el.remove();
+  }
+  return files;
+}
+
+// ---------------------------------------------------------------- state
+let engine, cm, snap = null, lastSave = null, deployedCode = "", prevCode = null, starterCode = "";
+let running = false, busy = false, tps = 5, loopTimer = null;
+let viewingObjective = null, selectedDrone = null, lastErrorKey = null, firstSnap = true;
+const anim = { drones: new Map(), floats: [], tickMs: 200, lastTick: 0 };
+
+// ---------------------------------------------------------------- tiny markdown + highlighting
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function hl(code) {
+  const out = document.createElement("code");
+  if (CodeMirror.runMode) CodeMirror.runMode(code, "python", out); else out.textContent = code;
+  return out.outerHTML;
+}
+function inline(s) { return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>"); }
+function md(text) {
+  return text.split(/```\n?/).map((part, i) => {
+    if (i % 2) return "<pre>" + hl(part.replace(/\n$/, "")) + "</pre>";
+    return part.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean).map(p => "<p>" + inline(p) + "</p>").join("");
+  }).join("");
+}
+
+// ---------------------------------------------------------------- persistence
+function persist() {
+  if (lastSave) store.set(SAVE_KEY, JSON.stringify({ world: lastSave, t: Date.now(), prev: prevCode }));
+}
+let draftTimer = null;
+function saveDraft() { clearTimeout(draftTimer); draftTimer = setTimeout(() => store.set(DRAFT_KEY, cm.getValue()), 400); }
+
+// ---------------------------------------------------------------- applying results
+function apply(r) {
+  const old = snap;
+  snap = r.snap; lastSave = r.save; deployedCode = r.code; starterCode = r.starter;
+  noteChanges(old, snap);
+  persist();
   render();
 }
 
-function persist() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ world: save(), t: Date.now() })); } catch (e) {}
+function noteChanges(old, s) {
+  const now = performance.now();
+  anim.lastTick = now;
+  const seen = new Set();
+  for (const d of s.drones) {
+    seen.add(d.id);
+    const a = anim.drones.get(d.id);
+    if (!a) { anim.drones.set(d.id, { fx: d.x, fy: d.y, x: d.x, y: d.y, cargo: d.cargo, dir: [1, 0], t0: now, born: now }); continue; }
+    const cur = dronePos(a, now);
+    if (a.x !== d.x || a.y !== d.y) a.dir = [Math.sign(d.x - a.x), Math.sign(d.y - a.y)];
+    a.fx = cur[0]; a.fy = cur[1]; a.x = d.x; a.y = d.y; a.t0 = now;
+    if (old && d.cargo > a.cargo) floatText(d.x, d.y, "+" + (d.cargo - a.cargo), "#f5c04a");
+    if (old && d.cargo < a.cargo && d.x === s.base[0] && d.y === s.base[1]) floatText(d.x, d.y, "+" + (a.cargo - d.cargo) + " 💎", "#4ade80", true);
+    a.cargo = d.cargo;
+  }
+  for (const id of [...anim.drones.keys()]) if (!seen.has(id)) anim.drones.delete(id);
+  if (!old) return;
+  if (s.ore !== old.ore) bump("cOre");
+  if (s.best_score > old.best_score) bump("cScore");
+  const was = new Set(old.objectives.filter(o => o.done).map(o => o.id));
+  for (const o of s.objectives) if (o.done && !was.has(o.id)) {
+    toast(`✅ Objective complete: <b>${esc(o.title)}</b>${o.reward ? ` <span class="reward">+${o.reward} 💎</span>` : ""}`, "goal", 5000);
+    if (viewingObjective === o.id) viewingObjective = null;
+  }
+}
+function bump(id) { const el = document.getElementById(id); el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+function toast(html, cls = "", ms = 3500) {
+  const t = document.createElement("div"); t.className = "toast " + cls; t.innerHTML = html;
+  const box = $("#toasts"); box.appendChild(t); setTimeout(() => t.remove(), ms);
+  while (box.children.length > 3) box.firstElementChild.remove();
 }
 
+// ---------------------------------------------------------------- calls with runaway recovery
+async function call(cmd, args, timeout) {
+  try { return await engine.call(cmd, args, timeout); }
+  catch (e) { if (e instanceof Runaway) { await recover(cmd); return null; } throw e; }
+}
+
+async function recover(cmd) {
+  setRunning(false);
+  const secs = WATCHDOG_MS / 1000;
+  $("#runawayWhy").innerHTML = cmd === "deploy"
+    ? `The top part of your code (outside <code>def tick</code>) ran for more than ${secs} seconds, so Pyworld stopped it. Your previous code is still running.`
+    : `One turn took more than ${secs} seconds, so Pyworld stopped your code and paused the game. Usual causes:`;
+  $("#runawayWhat").textContent = "Restarting Python…";
+  $("#runawayOk").hidden = true; $("#runawayBar").hidden = false; $("#runaway").hidden = false;
+  try {
+    await engine.restart();
+    let r = await engine.call("load", { save: lastSave }, 20000);
+    if (cmd !== "deploy") {
+      // The deployed code is the culprit: fall back to the code before it, or the starter.
+      const culprit = r.code;
+      const fallback = prevCode && prevCode !== culprit ? prevCode : r.starter;
+      r = await engine.call("deploy", { code: fallback });
+      prevCode = null;
+      $("#runawayWhat").innerHTML = fallback === r.starter
+        ? "Your drones are back on the empty starter code. Your code is still in the editor: fix it and Deploy."
+        : "Your drones went back to the code you had before. Your new code is still in the editor: fix it and Deploy.";
+    } else {
+      $("#runawayWhat").textContent = "Fix the code in the editor, then Deploy again.";
+    }
+    apply(r);
+    showError({ kind: "Took too long", message: `Stopped after ${secs} seconds`, line: null, who: cmd === "deploy" ? "Deploy failed" : "Runaway code",
+                hint: "Look for a loop that never ends or a very big number.", tick: snap.tick, local: true });
+  } catch (e) {
+    $("#runawayWhat").textContent = "Couldn't restart Python: " + e.message + ". Reload the page.";
+  }
+  $("#runawayBar").hidden = true; $("#runawayOk").hidden = false; $("#runawayOk").focus();
+}
+$("#runawayOk").onclick = () => { $("#runaway").hidden = true; cm.focus(); };
+
+// ---------------------------------------------------------------- actions
+async function deploy() {
+  const code = cm.getValue(), before = deployedCode;
+  const r = await call("deploy", { code });
+  if (!r) return false;
+  if (r.ok) { if (before !== code) prevCode = before; toast("✅ Code deployed"); }
+  apply(r);
+  if (!r.ok) toast("⚠️ Deploy failed: your previous code is still running", "bad");
+  return r.ok;
+}
+async function stepOnce(n = 1) {
+  if (busy) return; busy = true;
+  try { const r = await call("run", { n }, WATCHDOG_MS + 25 * n); if (r) apply(r); } finally { busy = false; }
+}
+function setRunning(on) {
+  running = on; clearTimeout(loopTimer);
+  $("#run").textContent = on ? "⏸ Pause" : "▶ Run";
+  $("#run").classList.toggle("primary", !on);
+  if (on) loop();
+}
+async function loop() {
+  if (!running) return;
+  const batch = tps > 20 ? Math.round(tps / 10) : 1, interval = 1000 * batch / tps, t0 = performance.now();
+  anim.tickMs = Math.min(interval / batch, 320);
+  await stepOnce(batch);
+  if (running) loopTimer = setTimeout(loop, Math.max(0, interval - (performance.now() - t0)));
+}
+$("#run").onclick = async () => {
+  if (!running && isDirty()) { if (!(await deploy())) return; }
+  setRunning(!running);
+};
+$("#step").onclick = () => { setRunning(false); anim.tickMs = 250; stepOnce(1); };
+for (const b of document.querySelectorAll("#speed button")) b.onclick = () => {
+  tps = +b.dataset.tps;
+  document.querySelectorAll("#speed button").forEach(x => x.classList.toggle("on", x === b));
+  store.set(PREFS_KEY, JSON.stringify({ tps }));
+};
+$("#deploy").onclick = deploy;
+document.addEventListener("keydown", e => {
+  if (e.key === " " && !e.target.closest(".CodeMirror, input, textarea, button, dialog")) { e.preventDefault(); $("#run").click(); }
+});
+
+// ---------------------------------------------------------------- editor + errors
+function isDirty() { return cm.getValue() !== deployedCode; }
+function updateDirty() { $("#dirty").hidden = !isDirty(); }
+let marked = null;
+function markLine(line) {
+  if (marked !== null) { cm.removeLineClass(marked, "background", "cm-error-line"); cm.removeLineClass(marked, "gutter", "cm-error-gutter"); marked = null; }
+  if (line && line <= cm.lineCount()) { marked = line - 1; cm.addLineClass(marked, "background", "cm-error-line"); cm.addLineClass(marked, "gutter", "cm-error-gutter"); }
+}
+function showError(e) {
+  const box = $("#errorBox");
+  if (!e) { box.hidden = true; markLine(null); return; }
+  const where = e.line ? `Line ${e.line} · ` : "";
+  const ctx = [e.who, e.tick != null ? "tick " + e.tick : ""].filter(Boolean).join(" · ");
+  const stale = isDirty() && !/^Deploy/.test(e.who || "") && e.line;
+  box.innerHTML = `<div class="head">⚠️ ${esc(where + e.kind)}<small>${esc(ctx)}</small></div>
+    <div class="msg">${esc(e.message)}</div>${e.hint ? `<div class="hint">💡 ${inline(e.hint)}</div>` : ""}
+    ${stale ? `<div class="stale">The line number refers to your deployed code, which is different from the editor.</div>` : ""}`;
+  box.hidden = false;
+  markLine(stale ? null : e.line);
+  if (e.line && !stale) cm.scrollIntoView({ line: e.line - 1, ch: 0 }, 60);
+}
+
+// ---------------------------------------------------------------- rendering: panels
 function render() {
-  const s = snap, c = $("map").getContext("2d");
-  c.clearRect(0, 0, 672, 448);
-  c.strokeStyle = "#171c27"; c.lineWidth = 1;
-  for (let x = 0; x <= s.w; x++) { c.beginPath(); c.moveTo(x * CELL + .5, 0); c.lineTo(x * CELL + .5, s.h * CELL); c.stroke(); }
-  for (let y = 0; y <= s.h; y++) { c.beginPath(); c.moveTo(0, y * CELL + .5); c.lineTo(s.w * CELL, y * CELL + .5); c.stroke(); }
-  for (const [x, y, a] of s.ore_tiles) {
-    c.fillStyle = `rgba(240,176,80,${0.25 + Math.min(a, 15) / 15 * 0.6})`;
-    c.fillRect(x * CELL + 2, y * CELL + 2, CELL - 3, CELL - 3);
+  const s = snap;
+  $("#sOre").textContent = s.ore;
+  $("#sScore").textContent = s.score;
+  $("#sBest").textContent = s.best_score;
+  $("#sDrones").textContent = `${s.drones.length}/${s.max_drones}`;
+  $("#sCpu").textContent = s.budget;
+  $("#sTick").textContent = s.tick;
+  renderObjectives(); renderShop(); renderLog(); renderInspector(); updateDirty();
+  const key = JSON.stringify(s.error);
+  if (key !== lastErrorKey) { lastErrorKey = key; if (!s.error || !(s.error.local)) showError(s.error); }
+  firstSnap = false;
+}
+
+let objKey = null;
+function renderObjectives() {
+  const s = snap, total = s.objectives.length, done = s.objectives.filter(o => o.done).length;
+  const cur = s.objectives.find(o => o.id === (viewingObjective || s.objective));
+  const key = [cur && cur.id, done, viewingObjective].join("|");
+  if (key !== objKey) {
+    objKey = key;
+    const card = $("#objCard");
+    if (!cur) {
+      card.innerHTML = `<div class="obj-top"><h2>Sandbox</h2><span class="reward">${done}/${total} ✓</span></div>
+        <div class="progress"><i style="width:100%"></i></div><p class="obj-title">🎉 All objectives done</p>
+        <div class="obj-body">${md("You know the whole API. Now it's about **score**: ore delivered in the last 100 ticks.\n\nYour best is shown at the top. Try smarter routes, spreading drones out, or buying drones earlier, and see how high it goes.")}</div>`;
+    } else {
+      const idx = s.objectives.indexOf(cur) + 1;
+      const label = cur.done ? `Objective ${idx} · done ✓` : `Objective ${idx} of ${total}`;
+      card.innerHTML = `<div class="obj-top"><h2>${label}</h2>${cur.reward ? `<span class="reward">Reward: ${cur.reward} 💎</span>` : ""}</div>
+        <div class="progress"><i style="width:${(done / total) * 100}%"></i></div>
+        <p class="obj-title">${esc(cur.title)}</p><div class="obj-body">${md(cur.text)}</div>
+        <details class="hint"><summary>💡 Stuck? Show a hint</summary><div>${inline(cur.hint)}</div></details>
+        ${viewingObjective ? `<p style="margin:10px 0 0"><button id="backToCur">← Back to current objective</button></p>` : ""}`;
+      const back = $("#backToCur"); if (back) back.onclick = () => { viewingObjective = null; renderObjectives(); };
+    }
+    const list = $("#objList"); list.innerHTML = "";
+    for (const o of s.objectives) {
+      const isCur = o.id === s.objective;
+      if (!o.done && !isCur) continue;
+      const li = document.createElement("li");
+      li.className = (o.done ? "done" : "cur") + (o.id === viewingObjective ? " viewing" : "");
+      li.innerHTML = `<span class="e">${o.done ? "✅" : "👉"}</span><span>${esc(o.title)}</span>`;
+      li.onclick = () => { viewingObjective = isCur ? null : o.id; renderObjectives(); };
+      list.appendChild(li);
+    }
+    const locked = total - done - (s.objective ? 1 : 0);
+    if (locked > 0) {
+      const li = document.createElement("li"); li.style.cursor = "default";
+      li.innerHTML = `<span class="e">🔒</span><span>${locked} more to unlock</span>`; list.appendChild(li);
+    }
   }
-  c.fillStyle = "#4a7bd0"; c.fillRect(2, 2, CELL - 3, CELL - 3);
-  c.fillStyle = "#fff"; c.font = "bold 12px sans-serif"; c.textAlign = "center"; c.fillText("B", CELL / 2, CELL / 2 + 4);
-  for (const d of s.drones) {
-    const cx = d.x * CELL + CELL / 2, cy = d.y * CELL + CELL / 2;
-    c.fillStyle = d.cargo ? "#f0b050" : "#5ac8a0";
-    c.beginPath(); c.arc(cx, cy, 8, 0, 7); c.fill();
-    c.fillStyle = "#08241a"; c.font = "10px sans-serif"; c.fillText(d.id, cx, cy + 3.5);
-  }
-  $("stats").innerHTML = `<span>Tick <b>${s.tick}</b></span><span>Ore <b>${s.ore}</b></span><span>Drones <b>${s.drones.length}/${s.max_drones}</b></span><span>CPU <b>${s.budget}</b></span>`;
-  const shop = $("shop"); shop.innerHTML = "";
+}
+
+const SHOP_ICONS = { scan: "📡", cpu: "🧠" };
+let shopKey = null;
+function renderShop() {
+  const s = snap;
+  const key = JSON.stringify([s.ore, s.drones.length, s.tech]);
+  if (key === shopKey) return; shopKey = key;
+  const shop = $("#shop"); shop.innerHTML = "";
+  const item = (icon, name, desc, btn) => {
+    const el = document.createElement("div"); el.className = "shop-item";
+    el.innerHTML = `<span class="e">${icon}</span><div class="what"><b>${name}</b><small>${desc}</small></div>`;
+    el.appendChild(btn); shop.appendChild(el);
+  };
+  const full = s.drones.length >= s.max_drones;
   const b = document.createElement("button");
-  b.textContent = `Buy drone (${s.drone_cost} ore)`; b.disabled = s.ore < s.drone_cost || s.drones.length >= s.max_drones;
-  b.onclick = () => { snap = buyDrone()[1]; render(); persist(); }; shop.appendChild(b);
+  b.textContent = full ? "Max" : `${s.drone_cost} 💎`; b.disabled = full || s.ore < s.drone_cost;
+  b.onclick = async () => { const r = await call("buy", {}); if (r) apply(r); };
+  item("🤖", "Drone", `Runs the same tick() code. ${s.drones.length}/${s.max_drones} owned.`, b);
   for (const [name, t] of Object.entries(s.tech_info)) {
-    const u = document.createElement("button");
-    u.textContent = t.owned ? `${name} ✓` : `${name} (${t.cost} ore)`; u.title = t.desc;
-    u.disabled = t.owned || s.ore < t.cost;
-    u.onclick = () => { snap = unlock(name)[1]; render(); persist(); }; shop.appendChild(u);
+    let el;
+    if (t.owned) { el = document.createElement("span"); el.className = "owned"; el.textContent = "✓ Owned"; }
+    else {
+      el = document.createElement("button"); el.textContent = `${t.cost} 💎`; el.disabled = s.ore < t.cost;
+      el.onclick = async () => { const r = await call("unlock", { name }); if (r) apply(r); };
+    }
+    item(SHOP_ICONS[name] || "🔧", name, esc(t.desc), el);
   }
-  const log = $("log"), stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+}
+
+let logKey = null;
+function renderLog() {
+  const s = snap, key = s.logs.join("\n");
+  if (key === logKey) return; logKey = key;
+  const log = $("#log"), stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
   log.innerHTML = "";
   for (const l of s.logs) {
     const d = document.createElement("div"); d.textContent = l;
-    if (/exceeded|Error|failed|locked/.test(l)) d.className = "err"; else if (/deployed|Unlocked/.test(l)) d.className = "ok";
+    if (/Objective complete/.test(l)) d.className = "goal";
+    else if (/print: /.test(l)) d.className = "print";
+    else if (/exceeded|Error|failed|locked|Too|Missing/.test(l)) d.className = "err";
+    else if (/deployed|Unlocked/.test(l)) d.className = "ok";
     log.appendChild(d);
   }
-  if (stick) log.scrollTop = log.scrollHeight;
+  if (stick || firstSnap) log.scrollTop = log.scrollHeight;
 }
 
-function tickOnce() { snap = step(); render(); if (snap.tick % 10 === 0) persist(); }
-function setRunning(on) {
-  running = on; clearInterval(timer);
-  $("run").textContent = on ? "Pause" : "Run";
-  if (on) timer = setInterval(tickOnce, 1000 / +$("speed").value);
+function renderInspector() {
+  const box = $("#inspector");
+  const d = selectedDrone != null && snap.drones.find(x => x.id === selectedDrone);
+  if (!d) { box.hidden = true; return; }
+  box.hidden = false;
+  const mem = JSON.stringify(d.memory, null, 1);
+  box.innerHTML = `<button class="x" title="Close">✕</button><b>🤖 Drone ${d.id}</b><br>
+    position <code>(${d.x}, ${d.y})</code> · cargo <b>${d.cargo}/${snap.capacity}</b>
+    <div style="margin-top:6px;color:var(--dim)">drone.memory</div><pre>${esc(mem === "{}" ? "{}  (empty)" : mem)}</pre>`;
+  box.querySelector(".x").onclick = () => { selectedDrone = null; renderInspector(); };
 }
-$("run").onclick = () => setRunning(!running);
-$("stepBtn").onclick = () => { setRunning(false); tickOnce(); };
-$("speed").onchange = () => { if (running) setRunning(true); };
-$("deploy").onclick = () => { const [ok, s] = deploy($("code").value); snap = s; render(); persist(); };
-$("code").addEventListener("keydown", e => {
-  if (e.key === "Tab") { e.preventDefault(); const t = e.target, p = t.selectionStart; t.setRangeText("    ", p, t.selectionEnd, "end"); }
-  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("deploy").click(); }
+
+// ---------------------------------------------------------------- rendering: map canvas
+const canvas = $("#map"), ctx = canvas.getContext("2d");
+const DRONE_COLORS = ["#56B4E9", "#E69F00", "#009E73", "#F0E442", "#CC79A7", "#D55E00", "#0072B2", "#E8EDF6"]; // Okabe-Ito
+let cell = 32;
+function sizeCanvas() {
+  if (!snap) return;
+  const dpr = window.devicePixelRatio || 1, cssW = canvas.clientWidth || 600;
+  cell = cssW / snap.w;
+  canvas.style.height = cell * snap.h + "px";
+  canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cell * snap.h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+new ResizeObserver(sizeCanvas).observe(canvas);
+
+function hash(x, y) { let h = (x * 374761393 + y * 668265263) ^ 0x5bd1e995; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function ease(t) { return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+function dronePos(a, now) {
+  const t = Math.min(1, (now - a.t0) / Math.max(60, anim.tickMs * 0.9)), k = ease(t);
+  return [a.fx + (a.x - a.fx) * k, a.fy + (a.y - a.fy) * k];
+}
+function floatText(x, y, text, color, big) { anim.floats.push({ x, y, text, color, big, t0: performance.now() }); }
+
+function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+
+function drawGround(s) {
+  for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+    const n = hash(x, y);
+    ctx.fillStyle = (x + y) % 2 ? `rgb(${22 + n * 6},${30 + n * 7},${40 + n * 8})` : `rgb(${25 + n * 6},${34 + n * 7},${45 + n * 8})`;
+    ctx.fillRect(x * cell, y * cell, cell + .5, cell + .5);
+    if (n > .86) { ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.beginPath(); ctx.arc((x + .3 + n * .4) * cell, (y + .6) * cell, cell * .06, 0, 7); ctx.fill(); }
+  }
+}
+function drawCrystal(cx, by, w, h, light) {
+  ctx.beginPath(); ctx.moveTo(cx, by - h); ctx.lineTo(cx + w / 2, by - h * .62); ctx.lineTo(cx + w / 2 * .8, by); ctx.lineTo(cx - w / 2 * .8, by); ctx.lineTo(cx - w / 2, by - h * .62); ctx.closePath();
+  const g = ctx.createLinearGradient(cx - w / 2, by - h, cx + w / 2, by);
+  g.addColorStop(0, light ? "#fff3c4" : "#ffe08a"); g.addColorStop(.5, "#f5c04a"); g.addColorStop(1, "#b7791f");
+  ctx.fillStyle = g; ctx.fill();
+  ctx.strokeStyle = "rgba(60,35,0,.55)"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, by - h); ctx.lineTo(cx, by); ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.stroke();
+}
+function drawOre(s, now) {
+  for (const [x, y, a, max] of s.ore_tiles) {
+    const px = x * cell, py = y * cell;
+    if (a <= 0) {
+      ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.beginPath(); ctx.ellipse(px + cell / 2, py + cell * .62, cell * .26, cell * .12, 0, 0, 7); ctx.fill();
+      continue;
+    }
+    const f = Math.min(1, a / 15);
+    ctx.fillStyle = `rgba(245,192,74,${.05 + f * .09})`; ctx.fillRect(px, py, cell, cell);
+    const glint = Math.sin(now / 700 + x * 1.7 + y * 2.3) > .97;
+    const s2 = .45 + .55 * f, cx = px + cell / 2 + (hash(y, x) - .5) * cell * .15;
+    drawCrystal(cx, py + cell * (.5 + .3 * s2), cell * .42 * s2, cell * .62 * s2, glint);
+  }
+}
+function drawBase(s, now) {
+  const [bx, by] = s.base, cx = (bx + .5) * cell, cy = (by + .5) * cell;
+  const pulse = .5 + .5 * Math.sin(now / 700);
+  ctx.fillStyle = `rgba(96,165,250,${.18 + pulse * .12})`; ctx.beginPath(); ctx.arc(cx, cy, cell * .62, 0, 7); ctx.fill();
+  ctx.strokeStyle = "rgba(96,165,250,.7)"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(cx, cy, cell * .46, now / 2000, now / 2000 + 7); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font = `${cell * .62}px ${getComputedStyle(document.body).getPropertyValue("--emoji")}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("🏠", cx, cy + cell * .04);
+}
+function drawDrone(d, a, now, color) {
+  const [fx, fy] = dronePos(a, now), cx = (fx + .5) * cell, cy = (fy + .5) * cell;
+  const moving = Math.abs(fx - a.x) + Math.abs(fy - a.y) > .01, bob = Math.sin(now / 260 + d.id) * cell * .03;
+  const r = cell * .34, y0 = cy + bob - cell * .04;
+  ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(cx, cy + cell * .36, r * .8, r * .25, 0, 0, 7); ctx.fill();
+  if (selectedDrone === d.id) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, cell * .5, 0, 7); ctx.stroke(); }
+  ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, cell * .05);
+  ctx.beginPath(); ctx.moveTo(cx, y0 - r); ctx.lineTo(cx, y0 - r - cell * .14); ctx.stroke();
+  ctx.fillStyle = Math.sin(now / 300 + d.id * 2) > 0 ? "#fef08a" : color; ctx.beginPath(); ctx.arc(cx, y0 - r - cell * .16, cell * .06, 0, 7); ctx.fill();
+  roundRect(cx - r, y0 - r, r * 2, r * 1.75, r * .45); ctx.fillStyle = color; ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 1.2; ctx.stroke();
+  roundRect(cx - r * .72, y0 - r * .62, r * 1.44, r * .8, r * .3); ctx.fillStyle = "#0b1220"; ctx.fill();
+  const [dx, dy] = a.dir, ex = dx * r * .16, ey = dy * r * .12, blink = (now / 1000 + d.id * .7) % 4 < .12;
+  ctx.fillStyle = "#e0f2fe";
+  for (const side of [-1, 1]) {
+    if (blink) ctx.fillRect(cx + side * r * .32 + ex - r * .13, y0 - r * .22 + ey, r * .26, r * .06);
+    else { ctx.beginPath(); ctx.arc(cx + side * r * .32 + ex, y0 - r * .22 + ey, r * .14, 0, 7); ctx.fill(); }
+  }
+  const cap = snap.capacity, pw = (r * 1.6) / cap;
+  for (let i = 0; i < cap; i++) {
+    ctx.fillStyle = i < d.cargo ? "#f5c04a" : "rgba(0,0,0,.4)";
+    ctx.fillRect(cx - r * .8 + i * pw + .5, y0 + r * .42, pw - 1, r * .22);
+  }
+  if (cell >= 24) {
+    ctx.font = `700 ${Math.max(8, cell * .22)}px system-ui`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.beginPath(); ctx.arc(cx + r * .95, y0 - r * .85, cell * .14, 0, 7); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.fillText(d.id, cx + r * .95, y0 - r * .84);
+  }
+  if (moving && Math.random() < .25) anim.floats.push({ x: fx + .5 - a.dir[0] * .35, y: fy + .85, dust: true, t0: now });
+  const e = snap.error;
+  if (e && e.who === "drone " + d.id && snap.tick - e.tick <= 1) {
+    ctx.font = `${cell * .42}px ${getComputedStyle(document.body).getPropertyValue("--emoji")}`; ctx.textBaseline = "bottom";
+    ctx.fillText("❗", cx, y0 - r - cell * .12);
+  }
+}
+function drawFloats(now) {
+  anim.floats = anim.floats.filter(f => now - f.t0 < (f.dust ? 450 : 1100));
+  for (const f of anim.floats) {
+    const t = (now - f.t0) / (f.dust ? 450 : 1100);
+    if (f.dust) { ctx.fillStyle = `rgba(200,210,230,${.25 * (1 - t)})`; ctx.beginPath(); ctx.arc(f.x * cell, f.y * cell, cell * (.05 + t * .1), 0, 7); ctx.fill(); continue; }
+    ctx.globalAlpha = 1 - t * t;
+    ctx.font = `800 ${cell * (f.big ? .42 : .34)}px system-ui, ${getComputedStyle(document.body).getPropertyValue("--emoji")}`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const x = (f.x + .5) * cell, y = (f.y + .1) * cell - t * cell * .8;
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.strokeText(f.text, x, y);
+    ctx.fillStyle = f.color; ctx.fillText(f.text, x, y);
+    ctx.globalAlpha = 1;
+  }
+}
+function frame(now) {
+  if (snap) {
+    if (canvas.width === 0 || Math.abs(canvas.clientWidth / snap.w - cell) > .5) sizeCanvas();
+    const s = snap;
+    ctx.clearRect(0, 0, s.w * cell, s.h * cell);
+    drawGround(s); drawOre(s, now); drawBase(s, now);
+    for (const d of s.drones) { const a = anim.drones.get(d.id); if (a) drawDrone(d, a, now, DRONE_COLORS[(d.id - 1) % DRONE_COLORS.length]); }
+    drawFloats(now);
+  }
+  requestAnimationFrame(frame);
+}
+function tileAt(ev) {
+  const r = canvas.getBoundingClientRect();
+  return [Math.floor((ev.clientX - r.left) / cell), Math.floor((ev.clientY - r.top) / cell)];
+}
+function oreAt(x, y) { const t = snap.ore_tiles.find(t => t[0] === x && t[1] === y); return t ? t[2] : 0; }
+canvas.addEventListener("mousemove", ev => {
+  if (!snap) return;
+  const [x, y] = tileAt(ev), a = oreAt(x, y);
+  $("#hover").textContent = `tile (${x}, ${y})` + (a ? ` · ${a} ore` : "") + (x === snap.base[0] && y === snap.base[1] ? " · base" : "");
 });
-$("resetCode").onclick = () => { $("code").value = starterCode(); };
-$("reset").onclick = () => {
-  if (!confirm("Reset the world? Your code stays in the editor.")) return;
-  setRunning(false); snap = newWorld(); $("deploy").click(); persist();
+canvas.addEventListener("mouseleave", () => { $("#hover").textContent = "hover a tile to see its (x, y)"; });
+canvas.addEventListener("click", ev => {
+  if (!snap) return;
+  const [x, y] = tileAt(ev);
+  const hit = snap.drones.filter(d => d.x === x && d.y === y);
+  selectedDrone = hit.length ? hit[(hit.findIndex(d => d.id === selectedDrone) + 1) % hit.length].id : null;
+  if (!hit.length) { const a = oreAt(x, y); toast(`📍 Tile <code>(${x}, ${y})</code>${a ? ` has <b>${a}</b> ore` : " has no ore"}`, "", 2200); }
+  renderInspector();
+});
+
+// ---------------------------------------------------------------- docs + menu
+function renderDocs() {
+  const has = t => snap && snap.tech.includes(t);
+  const row = (sig, desc, lock) => `<tr class="${lock ? "locked" : ""}"><td>${hl(sig)}</td><td>${inline(desc)}${lock ? " 🔒 " + lock : ""}</td></tr>`;
+  $("#docsBody").innerHTML = `
+  <h4>How it works</h4>
+  <p>Every tick the game calls <code>colony_tick(colony)</code> once (if you wrote one), then <code>tick(drone)</code> for each drone. A drone does <b>one action per tick</b> (move, mine or deposit); extra actions return <code>False</code>. Each drone may run <b>${snap ? snap.budget : 200} lines</b> of your code per tick (CPU). Only <code>math</code> can be imported. <code>print()</code> writes to the Log.</p>
+  <pre>${hl("def tick(drone):\n    ...\n\ndef colony_tick(colony):   # optional\n    ...")}</pre>
+  <h4>drone: what it knows</h4><table>
+  ${row("drone.x, drone.y", "Position. x grows to the right, y grows **down**. Base is (0, 0).")}
+  ${row("drone.cargo", "Ore carried now.")}${row("drone.capacity", "Most it can carry (5).")}
+  ${row("drone.id", "1, 2, 3… Use it to give drones different jobs.")}
+  ${row("drone.memory", "A dictionary that this drone keeps between ticks.")}
+  ${row("drone.at_base()", "`True` when standing on the base.")}
+  ${row("drone.ore_here()", "Ore on this tile (0 if none).")}
+  ${row("drone.scan()", "List of `(x, y, amount)` with ore within 6 tiles, closest first.", has("scan") ? "" : "unlock scan in the Shop")}
+  </table>
+  <h4>drone: actions (one per tick)</h4><table>
+  ${row("drone.right()  drone.left()", "Step one tile. Returns `True` if it moved.")}
+  ${row("drone.up()  drone.down()", "Up is y - 1, down is y + 1.")}
+  ${row("drone.move(dx, dy)", "Step in a direction; only the sign is used, and no diagonals.")}
+  ${row("drone.move_toward(x, y)", "One step toward a position.")}
+  ${row("drone.mine()", "Pick up 1 ore here. `False` if there's none or the hold is full.")}
+  ${row("drone.deposit()", "At base: drop all cargo into the colony. Returns how much.")}
+  </table>
+  <h4>colony</h4><table>
+  ${row("colony.ore", "Ore you can spend.")}${row("colony.drones", "How many drones you own.")}
+  ${row("colony.tick", "Current tick number.")}${row("colony.memory", "Dictionary shared by all your code.")}
+  ${row("colony.buy_drone()", "Spend 10 ore on a drone. `True` if bought.")}
+  ${row("colony.has(\"scan\")", "`True` if a tech is unlocked.")}
+  </table>
+  <h4>Python you can use</h4>
+  <p><code>if elif else for while def return and or not in</code>, lists, dicts, tuples, and
+  <code>abs all any bool dict divmod enumerate filter float int isinstance len list map max min pow print range reversed round set sorted str sum tuple zip</code>, plus <code>import math</code>.</p>`;
+}
+$("#docsBtn").onclick = () => { renderDocs(); $("#docs").showModal(); };
+$("#menuBtn").onclick = () => $("#menu").showModal();
+for (const b of document.querySelectorAll("dialog [data-close]")) b.onclick = () => b.closest("dialog").close();
+for (const d of document.querySelectorAll("dialog")) d.addEventListener("click", e => { if (e.target === d) d.close(); });
+$("#mStarter").onclick = () => { $("#menu").close(); if (cm.getValue() === starterCode || confirm("Replace the code in the editor with the empty starter?")) cm.setValue(starterCode); };
+$("#mReset").onclick = async () => {
+  if (!confirm("Start a brand new colony? Ore, drones, objectives and score are wiped. Your editor code stays.")) return;
+  $("#menu").close(); setRunning(false);
+  const r = await call("new", {}); if (!r) return;
+  prevCode = null; anim.drones.clear(); viewingObjective = null; snap = null; apply(r);
+  toast("🌱 New colony started. Deploy your code to get going.");
 };
-boot().catch(e => { $("loading").textContent = "Failed to load Python runtime: " + e + " (needs internet on first load)"; });
+$("#mExport").onclick = () => {
+  const blob = new Blob([JSON.stringify({ pyworld: 2, world: lastSave, editor: cm.getValue() }, null, 1)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `pyworld-tick${snap.tick}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$("#mImport").onclick = () => $("#importFile").click();
+$("#importFile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const r = await call("load", { save: data.world }, 20000); if (!r) return;
+    setRunning(false); prevCode = null; anim.drones.clear(); snap = null; apply(r);
+    if (data.editor) cm.setValue(data.editor);
+    $("#menu").close(); toast("📂 Save loaded");
+  } catch (err) { alert("That file isn't a Pyworld save: " + err.message); }
+};
+
+// ---------------------------------------------------------------- boot
+async function boot() {
+  const msg = t => { $("#bootMsg").textContent = t; };
+  cm = CodeMirror.fromTextArea($("#code"), {
+    mode: "python", lineNumbers: true, indentUnit: 4, tabSize: 4, matchBrackets: true, styleActiveLine: true,
+    extraKeys: {
+      Tab: c => c.somethingSelected() ? c.indentSelection("add") : c.replaceSelection("    ", "end"),
+      "Shift-Tab": c => c.indentSelection("subtract"),
+      "Ctrl-Enter": () => deploy(), "Cmd-Enter": () => deploy(),
+    },
+  });
+  cm.on("change", () => { updateDirty(); saveDraft(); });
+  try { tps = JSON.parse(store.get(PREFS_KEY) || "{}").tps || 5; } catch (e) {}
+  document.querySelectorAll("#speed button").forEach(x => x.classList.toggle("on", +x.dataset.tps === tps));
+
+  await new Promise(r => setTimeout(r, 30)); // let the boot screen paint
+  engine = new Engine(assetFiles());
+  msg("Starting Python…");
+  await engine.start();
+  msg("Loading your colony…");
+
+  let saved = null;
+  try { saved = JSON.parse(store.get(SAVE_KEY) || store.get(OLD_SAVE_KEY) || "null"); } catch (e) {}
+  let r = null;
+  if (saved) {
+    try { r = await engine.call("load", { save: saved.world }, 20000); prevCode = saved.prev || null; }
+    catch (e) { console.warn("save could not be loaded", e); toast("⚠️ Your old save couldn't be loaded, so a new colony was started.", "bad", 6000); }
+  }
+  if (!r) r = await engine.call("new", {});
+  apply(r);
+  const draft = store.get(DRAFT_KEY);
+  cm.setValue(draft != null ? draft : r.code);
+  cm.clearHistory();
+
+  if (saved && r) {
+    const away = Math.min(MAX_AWAY_TICKS, Math.floor((Date.now() - saved.t) / 1000));
+    if (away >= 5) {
+      msg(`Catching up ${away} ticks while you were away…`);
+      const mined0 = snap.mined_total;
+      for (let left = away; left > 0 && r; left -= 100) {
+        r = await call("run", { n: Math.min(100, left) }, 15000);
+        if (r) apply(r);
+      }
+      if (r) toast(`🌙 While you were away (${away} ticks): +${snap.mined_total - mined0} ore delivered`, "", 6000);
+    }
+  }
+  $("#boot").remove();
+  sizeCanvas();
+  requestAnimationFrame(frame);
+}
+boot().catch(e => {
+  console.error(e);
+  $("#bootMsg").innerHTML = "Couldn't start Python: " + esc(e.message || e) + "<br><br>Try Chrome or Edge, and make sure the whole file downloaded.";
+  document.querySelector("#boot .bar").remove();
+});
 </script>
 </body>
 </html>
