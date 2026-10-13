@@ -24,4 +24,4 @@ Download `dist/index.html` and double-click it (Chrome or Edge). It is one ~19 M
 - The sandbox is restricted builtins plus a CPU budget and a watchdog. Fine on your own machine; not hardened for a shared server.
 
 ## Credits
-Art, UI, fonts and sounds by [Kenney](https://www.kenney.nl) (Simple Space, UI Pack - Sci-fi, Sci-Fi Sounds), CC0. Only the files used are in `assets/kenney/`, each pack with its License.txt.
+Art, UI, fonts and sounds by [Kenney](https://www.kenney.nl) (Simple Space, UI Pack - Sci-fi, Sci-Fi Sounds), CC0. The files the game uses are in `assets/kenney/` (with each License.txt); the complete packs are kept unmodified in `assets/packs/`.
