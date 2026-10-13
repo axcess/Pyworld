@@ -54,23 +54,23 @@ await p.click("#run"); // pause
 
 // syntax error
 await setCode("def tick(drone):\n    if drone.cargo > 0\n        drone.deposit()\n");
-await p.evaluate(() => deploy());
+await p.click("#deploy");
 await p.waitForSelector("#errorBox:not([hidden])");
 console.log("errorbox:", (await p.textContent("#errorBox")).replace(/\s+/g, " "));
 await p.screenshot({ path: SHOTS + "/4-error.png" });
 
 // runtime error with line
 await setCode("def tick(drone):\n    x = 1\n    drone.fly()\n");
-await p.evaluate(() => deploy());
+await p.click("#deploy");
 await p.click("#step");
 await p.waitForTimeout(800);
 console.log("runtime err:", (await p.textContent("#errorBox")).replace(/\s+/g, " "));
 
 // runaway: single C-level line the line budget can't catch
 const good = "def tick(drone):\n    drone.move_toward(4, 3)\n";
-await setCode(good); await p.evaluate(() => deploy());
+await setCode(good); await p.click("#deploy");
 await setCode("def tick(drone):\n    total = sum(range(10**10))\n");
-await p.evaluate(() => deploy());
+await p.click("#deploy");
 const tr = Date.now();
 await p.click("#run");
 await p.waitForSelector("#runawayOk:not([hidden])", { timeout: 30000 });
@@ -83,7 +83,7 @@ console.log("still ticking", (await state()).tick);
 
 // runaway at deploy time (top-level)
 await setCode("x = sum(range(10**10))\ndef tick(drone):\n    pass\n");
-await p.evaluate(() => deploy());
+await p.click("#deploy");
 await p.waitForSelector("#runawayOk:not([hidden])", { timeout: 30000 });
 await p.click("#runawayOk");
 console.log("deploy-runaway, code kept:", (await state()).code === good);
@@ -95,18 +95,16 @@ await p.waitForSelector("#boot", { state: "detached", timeout: 90000 });
 const after = await state();
 console.log("reload persisted:", before.tick <= after.tick, before.done.length === after.done.length, after);
 
-// layouts: open the lesson drawer, then compare with the classic layout
-await p.click("#openLesson"); await p.waitForTimeout(300); await p.screenshot({ path: SHOTS + "/9-game-lesson.png" });
-await p.click("#drawerClose");
-await p.click("#layoutBtn"); await p.waitForTimeout(400);
-console.log("classic layout:", await p.evaluate(() => !document.body.classList.contains("game") && !document.querySelector("main.layout").hidden));
-await p.screenshot({ path: SHOTS + "/10-classic.png" });
-await p.click("#layoutBtn"); await p.waitForTimeout(400);
-console.log("game layout again:", await p.evaluate(() => document.body.classList.contains("game")));
-
 // docs + menu screenshots
 await p.click("#docsBtn"); await p.waitForTimeout(200); await p.screenshot({ path: SHOTS + "/6-docs.png" }); await p.keyboard.press("Escape");
 
+// phone layout
+const m = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+await m.goto(FILE);
+await m.waitForSelector("#boot", { state: "detached", timeout: 90000 });
+await m.waitForTimeout(500);
+console.log("mobile horizontal overflow:", await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth));
+await m.screenshot({ path: SHOTS + "/7-phone.png", fullPage: true });
 const tablet = await b.newPage({ viewport: { width: 1100, height: 800 } });
 await tablet.goto(FILE); await tablet.waitForSelector("#boot", { state: "detached", timeout: 90000 }); await tablet.waitForTimeout(400);
 await tablet.screenshot({ path: SHOTS + "/8-1100.png" });
