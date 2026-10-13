@@ -538,6 +538,87 @@ span.CodeMirror-selectedtext { background: none; }
   .menu-list { display:flex; flex-direction:column; gap:10px; }
   .menu-list button { text-align:left; font:600 14px system-ui; padding:6px 12px 9px; text-transform:none; }
   .menu-list small { display:block; color:var(--ink-dim); font-weight:400; }
+
+  /* ---------- game layout (map is the screen, UI floats; Screeps/Shapez style) ---------- */
+  #layoutBtn { white-space:nowrap; }
+  .top[hidden], main.layout[hidden] { display:none !important; }
+  body.game { overflow:hidden; }
+  #gameLayout { display:grid; grid-template-columns:minmax(0, 1fr) clamp(380px, 34vw, 560px); height:100vh; }
+  #gameLayout[hidden] { display:none; }
+  .stage { position:relative; overflow:hidden; background:radial-gradient(ellipse at 30% 20%, #1b2457, #070a1d 70%); }
+  .map-wrap { position:absolute; inset:64px 16px 88px; display:flex; align-items:center; justify-content:center; }
+  body.game #map { border-radius:6px; box-shadow:0 0 0 2px #2a3570, 0 20px 60px rgba(0,0,0,.6); }
+  .hud { position:absolute; z-index:3; }
+  .hud-tl { left:12px; top:10px; right:340px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  body.game .stats { flex-wrap:wrap; gap:6px; }
+  body.game .chip { white-space:nowrap; }
+  body.game .chip small { display:none; }
+  body.game .chip.score small { display:inline; }
+  .hud-tl .brand { font-size:16px; margin-right:6px; text-shadow:0 2px 6px #000; }
+  .hud-tl .brand .ico { width:22px; height:22px; }
+  #hoverHud { font:11px var(--narrow); color:var(--dim); text-transform:uppercase; letter-spacing:.04em; }
+  .hud-tr { right:12px; top:10px; width:310px; color:var(--ink); padding:4px 10px 10px; border:solid transparent; border-width:34px 14px 14px; border-image:var(--img-header) 68 28 28 28 fill / 34px 14px 14px; filter:drop-shadow(0 8px 20px rgba(0,0,0,.5)); }
+  .mini-head { margin:-36px -6px 8px; height:30px; display:flex; align-items:center; justify-content:space-between; color:#fff; font:12px var(--title); text-transform:uppercase; letter-spacing:.05em; }
+  .mini-title { font:15px/1.25 var(--title); text-transform:uppercase; color:#1d2232; margin:0 0 6px; }
+  .mini-line { font-size:13px; color:#373e52; margin:0 0 8px; }
+  .mini-line code { font-size:12px; }
+  .hud-tr .progress { margin:0 0 10px; }
+  .hud-tr .row { display:flex; gap:6px; }
+  .hud-bl { left:12px; bottom:14px; display:flex; gap:4px; align-items:center; flex-wrap:nowrap; padding:6px 8px; background:rgba(8,12,30,.82); border:2px solid #2a3570; border-radius:14px; }
+  .hud-bc { right:12px; bottom:14px; }
+  body.game #shop { display:flex; gap:8px; }
+  body.game .shop-item { flex-direction:column; width:96px; gap:4px; padding:8px 6px 6px; border:2px solid #2a3570; border-radius:12px; background:rgba(8,12,30,.85); text-align:center; color:var(--fg); }
+  body.game .shop-item:first-of-type { padding-top:8px; }
+  body.game .shop-item .what b { font-size:11px; color:#fff; }
+  body.game .shop-item .what small { display:none; }
+  body.game .shop-item .ico { color:#5fd4ff; }
+  body.game .owned { color:#5ef0a8; font-size:11px; }
+  #lessonDrawer { position:absolute; left:12px; top:108px; bottom:12px; width:min(400px, calc(100% - 24px)); overflow:auto; z-index:5; animation:drawer .2s ease-out; }
+  #lessonDrawer[hidden] { display:none; }
+  @keyframes drawer { from { transform:translateX(-30px); opacity:0; } }
+  #lessonDrawer .card { filter:drop-shadow(0 10px 30px rgba(0,0,0,.6)); }
+  .drawer-close { position:sticky; top:0; z-index:2; display:flex; justify-content:flex-end; margin-bottom:6px; }
+  .codepanel { display:flex; flex-direction:column; min-height:0; background:#0b1026; border-left:2px solid #2a3570; }
+  .codepanel, .code-body, .dock { min-width:0; }
+  .code-body { overflow:hidden; }
+  .code-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 10px; background:linear-gradient(#1c9fd7, #1786b8); border-bottom:2px solid #11648c; }
+  .code-head .file { font:13px var(--title); color:#fff; letter-spacing:.06em; text-shadow:0 1px 0 rgba(0,40,80,.5); }
+  .code-head .grow { flex:1; }
+  body.game #dirty { font-size:0; } body.game #dirty::before { content:"●"; font-size:14px; color:#ffd166; }
+  .code-head #run { padding:4px 18px 5px; font-size:14px; }
+  #utilSlot { display:flex; gap:3px; }
+  #utilSlot button { padding:3px 7px 5px; font-size:11px; }
+  .code-body { flex:1 1 auto; min-height:0; padding:8px 8px 0; }
+  body.game .CodeMirror { height:100%; border-radius:6px; }
+  #errorSlot #errorBox { margin:8px 8px 0; }
+  .dock { flex:0 0 32%; display:flex; flex-direction:column; min-height:150px; padding:8px; }
+  .dock-tabs { display:flex; gap:2px; }
+  .dock-tabs button { padding:4px 10px 6px; font-size:11px; }
+  .dock-tabs button.on { color:#fff; text-shadow:0 1px 0 rgba(0,40,80,.6); border-image:var(--img-blue) 22 22 22 22 fill / 11px; }
+  .dock-body { flex:1; min-height:0; margin-top:6px; }
+  .dock-body > div { height:100%; overflow:auto; }
+  .dock-body > div[hidden] { display:none; }
+  body.game #log { height:100%; }
+  #goalsSlot { background:#dadce7; border-radius:8px; padding:8px; color:var(--ink); }
+  .console-mock { height:100%; background:#0f1530; border-radius:8px; padding:8px 10px; font:12.5px/1.6 var(--mono); color:#c7d0ea; box-shadow:inset 0 2px 6px rgba(0,0,0,.5); }
+  .console-mock .p { color:#5ef0a8; } .console-mock .o { color:#7dd3fc; } .console-mock .note { color:var(--dim); font:12px system-ui; margin-top:8px; }
+  body.game #toasts { left:12px; right:auto; bottom:110px; align-items:flex-start; }
+  body.game #inspector { top:64px; right:336px; }
+  @media (max-width: 900px) {
+    body.game { overflow:auto; }
+    #gameLayout { grid-template-columns:minmax(0, 1fr); height:auto; }
+    .stage { display:flex; flex-direction:column; gap:8px; padding:10px; }
+    .hud, .map-wrap { position:static; }
+    .hud-tl { flex-wrap:wrap; } body.game .stats { flex-wrap:wrap; }
+    .hud-tr { display:none; }
+    .hud-bl { justify-content:center; flex-wrap:wrap; }
+    body.game #shop { justify-content:center; }
+    body.game .shop-item { width:auto; flex:1; }
+    #lessonDrawer { position:fixed; inset:8px; width:auto; }
+    .code-body { height:340px; flex:none; }
+    .dock { flex:none; height:240px; }
+    body.game #inspector { right:12px; }
+  }
 </style>
 </head>
 <body>
@@ -564,6 +645,7 @@ span.CodeMirror-selectedtext { background: none; }
     <button id="docsBtn">📖 API</button>
     <button id="muteBtn" title="Sound on/off">🔊</button>
     <button id="menuBtn" title="Save, reset">⋯</button>
+    <button id="layoutBtn" title="Switch between the classic and the game layout">⇄ Layout</button>
   </div>
 </header>
 
@@ -584,13 +666,37 @@ span.CodeMirror-selectedtext { background: none; }
   </section>
   <section class="right">
     <div class="card editor-card">
-      <div class="cardhead"><h2>Your code</h2><span id="dirty" hidden>● changed</span>
+      <div class="cardhead"><h2>Your code</h2><span id="dirty" hidden title="Changed since the last Run">● changed</span>
         <button id="deploy" class="primary" title="Load this code into your drones">Deploy<kbd>Ctrl+Enter</kbd></button></div>
       <textarea id="code" spellcheck="false"></textarea>
       <div id="errorBox" hidden></div>
     </div>
   </section>
 </main>
+
+<div id="gameLayout" hidden>
+  <section class="stage" id="stage">
+    <div class="map-wrap" id="mapWrap"></div>
+    <div class="hud hud-tl"><div class="brand"><span class="ico drone"></span> PYWORLD</div><div id="hudStats"></div><span id="hoverHud"></span></div>
+    <div class="hud hud-tr" id="objMini"></div>
+    <div class="hud hud-bl" id="hudCtrl"></div>
+    <div class="hud hud-bc" id="hudShop"></div>
+    <aside id="lessonDrawer" hidden><div class="drawer-close"><button id="drawerClose">✕ Close lesson</button></div><div id="drawerBody"></div></aside>
+  </section>
+  <aside class="codepanel">
+    <div class="code-head"><span class="file">MAIN.PY</span><span id="dirtySlot"></span><span class="grow"></span><span id="utilSlot"></span><span id="runSlot"></span></div>
+    <div class="code-body" id="codeBody"></div>
+    <div id="errorSlot"></div>
+    <div class="dock">
+      <div class="dock-tabs"><button data-tab="log" class="on">Log</button><button data-tab="console">Console</button><button data-tab="goals">Objectives</button></div>
+      <div class="dock-body">
+        <div data-pane="log" id="logSlot"></div>
+        <div data-pane="console" hidden><div class="console-mock"><div><span class="p">&gt;&gt;&gt;</span> drone.go_to(4, 3)</div><div class="o">True</div><div><span class="p">&gt;&gt;&gt;</span> drone.cargo</div><div class="o">5</div><div><span class="p">&gt;&gt;&gt;</span> <span style="opacity:.5">type a command…</span></div><div class="note">Mockup: the command console arrives with the tutorial in Phase 1.</div></div></div>
+        <div data-pane="goals" id="goalsSlot" hidden></div>
+      </div>
+    </div>
+  </aside>
+</div>
 
 <div id="toasts"></div>
 
@@ -11503,7 +11609,7 @@ document.addEventListener("keydown", e => {
 });
 
 // ---------------------------------------------------------------- editor + errors
-function savePrefs() { store.set(PREFS_KEY, JSON.stringify({ tps, muted })); }
+function savePrefs() { store.set(PREFS_KEY, JSON.stringify({ tps, muted, layout })); }
 function isDirty() { return cm.getValue() !== deployedCode; }
 function updateDirty() { $("#dirty").hidden = !isDirty(); }
 let marked = null;
@@ -11566,6 +11672,7 @@ function renderObjectives() {
         ${viewingObjective ? `<p style="margin:10px 0 0"><button id="backToCur">← Back to current objective</button></p>` : ""}`;
       const back = $("#backToCur"); if (back) back.onclick = () => { viewingObjective = null; renderObjectives(); };
     }
+    renderMini(cur, done, total);
     const list = $("#objList"); list.innerHTML = "";
     for (const o of s.objectives) {
       const isCur = o.id === s.objective;
@@ -11583,6 +11690,55 @@ function renderObjectives() {
     }
   }
 }
+
+function renderMini(cur, done, total) {
+  const box = $("#objMini");
+  if (!cur || viewingObjective) {
+    if (!cur) box.innerHTML = `<div class="mini-head"><span>Sandbox</span><span>${done}/${total} ✓</span></div><p class="mini-title">Beat your best score</p><p class="mini-line">Score = ore delivered in the last 100 ticks.</p>`;
+    if (!cur) return;
+  }
+  const o = snap.objectives.find(x => x.id === snap.objective) || cur, idx = snap.objectives.indexOf(o) + 1;
+  const first = (o.text.split(/\n\s*\n/)[0].match(/^[^]*?[.!?](\s|$)/) || [o.text.split("\n")[0]])[0];
+  box.innerHTML = `<div class="mini-head"><span>Objective ${idx} / ${total}</span>${o.reward ? `<span>+${o.reward} ore</span>` : ""}</div>
+    <p class="mini-title">${esc(o.title)}</p><p class="mini-line">${inline(first.trim())}</p>
+    <div class="progress"><i style="width:${(done / total) * 100}%"></i></div>
+    <div class="row"><button class="blue" id="openLesson">📖 Lesson and hint</button></div>`;
+  $("#openLesson").onclick = () => { $("#lessonDrawer").hidden = false; };
+}
+$("#drawerClose").onclick = () => { $("#lessonDrawer").hidden = true; };
+for (const t of document.querySelectorAll(".dock-tabs button")) t.onclick = () => {
+  document.querySelectorAll(".dock-tabs button").forEach(b => b.classList.toggle("on", b === t));
+  document.querySelectorAll(".dock-body > div").forEach(d => { d.hidden = d.dataset.pane !== t.dataset.tab; });
+};
+
+// Layout switch: the same live elements are moved between the classic grid and the game layout.
+const homes = new Map();
+function park(el, dest) {
+  if (!homes.has(el)) { const ph = document.createComment("home"); el.parentNode.insertBefore(ph, el); homes.set(el, ph); }
+  dest.appendChild(el);
+}
+function unpark(el) { const ph = homes.get(el); if (ph) ph.parentNode.insertBefore(el, ph); }
+let layout = "game";
+function setLayout(mode) {
+  layout = mode;
+  const g = mode === "game";
+  const moves = [
+    [$("#map"), "#mapWrap"], [$("#inspector"), "#mapWrap"], [$(".stats"), "#hudStats"],
+    [$("#step"), "#hudCtrl"], [$("#speed"), "#hudCtrl"], [$("#docsBtn"), "#utilSlot"], [$("#muteBtn"), "#utilSlot"],
+    [$("#menuBtn"), "#utilSlot"], [$("#layoutBtn"), "#utilSlot"], [$("#shop"), "#hudShop"], [$("#objCard"), "#drawerBody"],
+    [$("#run"), "#runSlot"], [$("#dirty"), "#dirtySlot"], [cm.getWrapperElement(), "#codeBody"], [$("#errorBox"), "#errorSlot"],
+    [$("#log"), "#logSlot"], [$("#objList"), "#goalsSlot"],
+  ];
+  for (const [el, dest] of moves) g ? park(el, $(dest)) : unpark(el);
+  document.body.classList.toggle("game", g);
+  $("#gameLayout").hidden = !g;
+  $(".top").hidden = g; $("main.layout").hidden = g;
+  $("#layoutBtn").textContent = g ? "⇄" : "⇄ Game layout";
+  $("#layoutBtn").title = g ? "Switch to the classic layout" : "Switch to the game layout";
+  savePrefs();
+  requestAnimationFrame(() => { sizeCanvas(); cm.refresh(); });
+}
+$("#layoutBtn").onclick = () => setLayout(layout === "game" ? "classic" : "game");
 
 const SHOP_ICONS = { scan: "📡", cpu: "🧠" };
 let shopKey = null;
@@ -11647,13 +11803,23 @@ const DRONE_COLORS = ["#56B4E9", "#E69F00", "#2fd3a0", "#F0E442", "#ff8fd1", "#f
 let cell = 32;
 function sizeCanvas() {
   if (!snap) return;
-  const dpr = window.devicePixelRatio || 1, cssW = canvas.clientWidth || 600;
-  cell = cssW / snap.w;
+  const dpr = window.devicePixelRatio || 1;
+  if (document.body.classList.contains("game")) {  // fit the whole map inside the stage
+    const wrap = $("#mapWrap");
+    const byH = getComputedStyle(wrap).position === "absolute" ? wrap.clientHeight / snap.h : Infinity;
+    cell = Math.max(10, Math.floor(Math.min(wrap.clientWidth / snap.w, byH)));
+    canvas.style.width = cell * snap.w + "px";
+  } else {
+    canvas.style.width = "";
+    cell = (canvas.clientWidth || 600) / snap.w;
+  }
+  const cssW = cell * snap.w;
   canvas.style.height = cell * snap.h + "px";
   canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cell * snap.h * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 new ResizeObserver(sizeCanvas).observe(canvas);
+new ResizeObserver(sizeCanvas).observe($("#mapWrap"));
 
 function hash(x, y) { let h = (x * 374761393 + y * 668265263) ^ 0x5bd1e995; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function ease(t) { return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
@@ -11819,9 +11985,9 @@ function oreAt(x, y) { const t = snap.ore_tiles.find(t => t[0] === x && t[1] ===
 canvas.addEventListener("mousemove", ev => {
   if (!snap) return;
   const [x, y] = tileAt(ev), a = oreAt(x, y);
-  $("#hover").textContent = `tile (${x}, ${y})` + (a ? ` · ${a} ore` : "") + (x === snap.base[0] && y === snap.base[1] ? " · base" : "");
+  $("#hover").textContent = $("#hoverHud").textContent = `tile (${x}, ${y})` + (a ? ` · ${a} ore` : "") + (x === snap.base[0] && y === snap.base[1] ? " · base" : "");
 });
-canvas.addEventListener("mouseleave", () => { $("#hover").textContent = "hover a tile to see its (x, y)"; });
+canvas.addEventListener("mouseleave", () => { $("#hover").textContent = "hover a tile to see its (x, y)"; $("#hoverHud").textContent = ""; });
 canvas.addEventListener("click", ev => {
   if (!snap) return;
   const [x, y] = tileAt(ev);
@@ -11907,7 +12073,8 @@ async function boot() {
     },
   });
   cm.on("change", () => { updateDirty(); saveDraft(); });
-  try { const pr = JSON.parse(store.get(PREFS_KEY) || "{}"); tps = pr.tps || 5; muted = !!pr.muted; } catch (e) {}
+  let wantLayout = "game";
+  try { const pr = JSON.parse(store.get(PREFS_KEY) || "{}"); tps = pr.tps || 5; muted = !!pr.muted; wantLayout = pr.layout || "game"; } catch (e) {}
   setMuted(muted);
   document.querySelectorAll("#speed button").forEach(x => x.classList.toggle("on", +x.dataset.tps === tps));
 
@@ -11942,6 +12109,7 @@ async function boot() {
       if (r) toast(`🌙 While you were away (${away} ticks): +${snap.mined_total - mined0} ore delivered`, "", 6000);
     }
   }
+  setLayout(wantLayout);
   $("#boot").remove();
   sizeCanvas();
   requestAnimationFrame(frame);
