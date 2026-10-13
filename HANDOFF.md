@@ -9,6 +9,13 @@
 - Verify: `python3 -m pytest tests` (20 tests) and `node tests/browser/e2e.mjs` (needs `playwright-core`; checks zero network requests from file://, objectives, errors, runaway recovery, reload, phone layout).
 - Branch this session: `claude/eager-bell-bwpr3d`.
 
+## Session 2b: curriculum + reskin (read this too)
+- The user's course is **CodeHS Intro to Python, Units 1–7** (Drive folder they shared): Karel (commands, functions, top-down design, comments, for/if/else/while, parameters), print/variables/types/input/math/string ops, booleans/comparison/logical operators/floats+round, Quiz Game (score variable), while/for i in range/break/continue/nested control. **Lists, dicts, classes and return values are NOT in the course**; the user still wants a "beyond the course" tier with lists and **classes**.
+- **The user rejected Karel-style APIs** ("is it really indicative of how python looks?"). Use real-Python object style (`drone.go_to(x, y)`, `drone.is_full()`), not `move()/turn_left()`.
+- Agreed direction, not built yet: a **short tutorial of single commands that ends at `def loop(colony):`** (one Screeps-style entry point, `for drone in colony.drones:`), objectives labelled by course unit, a later "beyond the course" tier (lists, classes). Ideas from TooAngel/screeps (AGPL: ideas only, no code): role functions, task lists, bodies from parts, role counts, depot/hauler logistics, quests as class challenges.
+- Later, not now: a shared class map hosted from the teacher's laptop on the LAN during class; students' code would run in their own browsers and send actions to the host.
+- Reskin done: Kenney CC0 packs (space sprites, sci-fi UI 9-slice panels, Kenney Future font, sounds with mute) in `assets/kenney/`, inlined by `build.py` via `{{asset:path}}`. Kenney Future's lowercase x looks like H, so everything using that font is uppercased.
+
 ---
 
 # Original handoff (session 1)

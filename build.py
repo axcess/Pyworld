@@ -2,6 +2,7 @@
 
 Inlines:
   - pyworld/*.py (the sim), run by Pyodide inside a Web Worker
+  - assets/ (Kenney CC0 sprites, UI, fonts, sounds) as data URIs via {{asset:path}}
   - web/worker.js (the worker that hosts Pyodide)
   - Pyodide (Python runtime) and CodeMirror 5 (editor), fetched once from the npm
     registry at pinned versions into .cache/ (git-ignored) and base64-embedded
@@ -11,6 +12,7 @@ import hashlib
 import io
 import json
 import pathlib
+import re
 import tarfile
 import urllib.request
 
@@ -48,6 +50,14 @@ def package(name):
     return out
 
 
+MIME = {".png": "image/png", ".ogg": "audio/ogg", ".ttf": "font/ttf"}
+
+
+def data_uri(path):
+    """Inline a file from assets/ (written in the template as {{asset:path}})."""
+    return "data:%s;base64,%s" % (MIME[path.suffix], base64.b64encode(path.read_bytes()).decode())
+
+
 def script_json(obj):
     # "</" would end the surrounding <script> block early.
     return json.dumps(obj).replace("</", "<\\/")
@@ -70,6 +80,7 @@ def main():
     for k, v in parts.items():
         assert k in html, k
         html = html.replace(k, v)
+    html = re.sub(r"\{\{asset:([\w./-]+)\}\}", lambda m: data_uri(root / "assets" / m.group(1)), html)
     out = root / "dist"
     out.mkdir(exist_ok=True)
     (out / "index.html").write_text(html)

@@ -6,184 +6,219 @@
 <title>Pyworld</title>
 <style>__CM_CSS__</style>
 <style>
+  @font-face { font-family:"Kenney Future"; src:url({{asset:kenney/fonts/kenney_future.ttf}}) format("truetype"); }
+  @font-face { font-family:"Kenney Future Narrow"; src:url({{asset:kenney/fonts/kenney_future_narrow.ttf}}) format("truetype"); }
   :root {
-    --bg:#0e131d; --panel:#151c2a; --panel2:#1b2436; --line:#26314a; --fg:#e8edf6; --dim:#8f9bb3;
-    --acc:#4ade80; --acc-ink:#062b14; --gold:#f5c04a; --blue:#60a5fa; --bad:#f87171; --violet:#c4b5fd;
+    --space:#0b1026; --space2:#141b3a; --ink:#262c3d; --ink-dim:#5d6680; --panel:#dadce7; --edge:#969aab;
+    --fg:#eef1fb; --dim:#9aa5c4; --acc:#23cd87; --gold:#f5b830; --blue:#1c9fd7; --bad:#e2463f; --violet:#7c5cd6;
     --mono: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
     --emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    --title: "Kenney Future", system-ui, sans-serif;
+    --narrow: "Kenney Future Narrow", system-ui, sans-serif;
+    --img-panel: url({{asset:kenney/ui/Extra_panel_glass_notches.png}});
+    --img-header: url({{asset:kenney/ui/Blue_button_square_header_large_rectangle.png}});
+    --img-btn: url({{asset:kenney/ui/Extra_button_rectangle_depth.png}});
+    --img-green: url({{asset:kenney/ui/Green_bar_round_gloss_large.png}});
+    --img-blue: url({{asset:kenney/ui/Blue_bar_round_gloss_large.png}});
+    --img-yellow: url({{asset:kenney/ui/Yellow_bar_round_gloss_large.png}});
+    --img-track: url({{asset:kenney/ui/Grey_bar_round_large.png}});
+    --spr-drone: url({{asset:kenney/space/enemy_D.png}});
+    --spr-meteor: url({{asset:kenney/space/meteor_detailedLarge.png}});
+    --spr-station: url({{asset:kenney/space/station_C.png}});
+    --spr-star: url({{asset:kenney/space/star_medium.png}});
   }
   * { box-sizing:border-box; }
-  html, body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  button { font:inherit; color:var(--fg); background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer; }
-  button:hover:not(:disabled) { background:#25304a; border-color:#34415f; }
-  button:disabled { opacity:.45; cursor:default; }
-  button.primary { background:var(--acc); color:var(--acc-ink); border-color:var(--acc); font-weight:650; }
-  button.primary:hover:not(:disabled) { background:#6ee7a0; }
-  kbd { font:11px var(--mono); opacity:.7; margin-left:4px; }
-  h2 { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin:0 0 8px; font-weight:650; }
-  code { font-family:var(--mono); font-size:.92em; background:#0b1018; border:1px solid var(--line); border-radius:4px; padding:0 4px; }
+  button, h2, .chip, .brand, .obj-title, .reward, .legend, #dirty, .owned, .modal h3, dialog .dhead h3, .docs h4, .shop-item .what b, .seg .lbl { text-transform:uppercase; }
+  html, body { margin:0; color:var(--fg); font:14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { background:radial-gradient(ellipse at 20% -10%, #24306a 0%, var(--space2) 35%, var(--space) 75%) fixed, var(--space); min-height:100vh; }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.55; z-index:-1;
+    background-image: radial-gradient(1px 1px at 12% 22%, #fff, transparent), radial-gradient(1px 1px at 68% 14%, #cfe3ff, transparent),
+      radial-gradient(1.5px 1.5px at 35% 72%, #fff, transparent), radial-gradient(1px 1px at 88% 62%, #fff, transparent),
+      radial-gradient(1px 1px at 52% 44%, #a9c6ff, transparent), radial-gradient(1.5px 1.5px at 78% 88%, #fff, transparent);
+    background-size: 340px 300px; }
+  /* sprites used as tinted icons: colour comes from `color` */
+  .ico { display:inline-block; width:1.15em; height:1.15em; vertical-align:-.2em; background:currentColor; -webkit-mask:var(--m) center/contain no-repeat; mask:var(--m) center/contain no-repeat; }
+  .ico.drone { --m:var(--spr-drone); } .ico.meteor { --m:var(--spr-meteor); } .ico.station { --m:var(--spr-station); } .ico.star { --m:var(--spr-star); }
+
+  /* Kenney buttons: 9-slice images */
+  button { font:600 13px/1 var(--narrow); letter-spacing:.02em; color:var(--ink); cursor:pointer; padding:5px 12px 7px;
+    border:8px solid transparent; border-image:var(--img-btn) 16 16 24 16 fill / 6px 6px 9px 6px; background:none; text-shadow:0 1px 0 rgba(255,255,255,.6); }
+  button:hover:not(:disabled) { filter:brightness(1.06); }
+  button:active:not(:disabled) { transform:translateY(1px); }
+  button:disabled { opacity:.5; cursor:default; }
+  button.primary { color:#fff; text-shadow:0 1px 0 rgba(0,70,40,.6); border-image:var(--img-green) 22 22 22 22 fill / 11px 11px 11px 11px; padding:3px 14px 4px; }
+  button.blue, .seg button.on { color:#fff; text-shadow:0 1px 0 rgba(0,40,80,.6); border-image:var(--img-blue) 22 22 22 22 fill / 11px 11px 11px 11px; }
+  kbd { font:10px var(--mono); opacity:.75; margin-left:6px; }
+  h2 { font:13px/1 var(--title); letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); margin:0 0 10px; font-weight:400; }
+  code { font-family:var(--mono); font-size:.92em; background:#c9ccdb; color:#1f2433; border-radius:4px; padding:0 4px; }
 
   /* top bar */
-  .top { display:flex; align-items:center; gap:16px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:5; flex-wrap:wrap; }
-  .brand { font-size:18px; font-weight:750; display:flex; gap:8px; align-items:center; }
-  .brand .e { font-family:var(--emoji); }
+  .top { display:flex; align-items:center; gap:12px; padding:8px 16px; background:rgba(8,12,30,.82); border-bottom:2px solid #2a3570; position:sticky; top:0; z-index:5; flex-wrap:wrap; backdrop-filter:blur(6px); }
+  .brand { font:20px var(--title); display:flex; gap:10px; align-items:center; color:#fff; letter-spacing:.04em; }
+  .brand .ico { color:#5fd4ff; width:28px; height:28px; transform:rotate(-20deg); }
   .stats { display:flex; gap:8px; flex-wrap:wrap; }
-  .chip { display:flex; align-items:baseline; gap:6px; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:3px 12px; }
-  .chip .e { font-family:var(--emoji); align-self:center; }
-  .chip b { font-variant-numeric:tabular-nums; font-size:15px; }
-  .chip small { color:var(--dim); }
-  .chip.score b#sScore { color:var(--gold); }
+  .chip { display:flex; align-items:center; gap:6px; padding:0 6px 1px; border:9px solid transparent; border-image:var(--img-track) 22 22 22 22 fill / 9px 11px 9px 11px; color:var(--ink); }
+  .chip .ico { width:18px; height:18px; }
+  .chip b { font:14px var(--title); font-variant-numeric:tabular-nums; }
+  .chip small { color:var(--ink-dim); font:10px var(--narrow); text-transform:uppercase; letter-spacing:.04em; }
+  .chip .e { font-family:var(--emoji); font-size:15px; }
+  #cOre .ico { color:#d99a12; } #cScore b#sScore { color:#c98a00; } #cDrones .ico { color:var(--blue); }
   .chip.bump { animation:bump .5s; }
-  @keyframes bump { 30% { transform:scale(1.12); border-color:var(--gold); } }
-  .controls { display:flex; gap:8px; align-items:center; margin-left:auto; flex-wrap:wrap; }
-  .seg { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
-  .seg button { border:0; border-radius:0; padding:6px 10px; background:var(--panel2); }
-  .seg button.on { background:#2d3b5c; color:#fff; }
+  @keyframes bump { 30% { transform:scale(1.12); } }
+  .controls { display:flex; gap:6px; align-items:center; margin-left:auto; flex-wrap:wrap; }
+  .seg { display:inline-flex; gap:2px; }
+  .seg button { padding:5px 7px 7px; min-width:34px; }
+  .seg .lbl { font:10px var(--narrow); color:var(--dim); align-self:center; margin-right:4px; letter-spacing:.06em; }
+  #muteBtn { min-width:46px; }
 
   /* layout */
-  .layout { display:grid; gap:14px; padding:14px 16px; grid-template-columns: minmax(280px, 320px) minmax(420px, 1.5fr) minmax(360px, 1fr); grid-template-areas: "side center right"; align-items:start; }
+  .layout { display:grid; gap:16px; padding:16px; grid-template-columns: minmax(280px, 320px) minmax(420px, 1.5fr) minmax(360px, 1fr); grid-template-areas: "side center right"; align-items:start; }
   .side { grid-area:side; } .center { grid-area:center; } .right { grid-area:right; }
-  .side, .center, .right { display:flex; flex-direction:column; gap:14px; min-width:0; }
+  .side, .center, .right { display:flex; flex-direction:column; gap:16px; min-width:0; }
   @media (max-width: 1250px) {
     .layout { grid-template-columns: minmax(0, 1.2fr) minmax(340px, 1fr); grid-template-areas: "center right" "side right"; }
   }
   @media (max-width: 860px) {
-    .layout { display:flex; flex-direction:column; align-items:stretch; padding:12px; }
+    .layout { display:flex; flex-direction:column; align-items:stretch; padding:10px; }
     .side, .center, .right { display:contents; }
     #objCard { order:1; } .mapcard { order:2; } .editor-card { order:3; } .shop-card { order:4; } .objlist-card { order:5; } .log-card { order:6; }
-    .top { padding:8px 12px; } .controls { margin-left:0; }
+    .top { padding:8px 10px; } .controls { margin-left:0; }
+    .legend { display:none; }
   }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; min-width:0; max-width:100%; }
+  /* Kenney panel with a blue header strip; the h2 sits in the strip */
+  .card { color:var(--ink); padding:6px 8px 6px; min-width:0; max-width:100%;
+    border:solid transparent; border-width:34px 14px 14px 14px; border-image:var(--img-header) 68 28 28 28 fill / 34px 14px 14px 14px;
+    filter:drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+  .card > h2:first-child, .card .cardhead { margin:-36px -6px 14px; height:30px; display:flex; align-items:center; gap:8px; color:#fff; text-shadow:0 1px 0 rgba(0,40,80,.55); }
+  .card .cardhead h2 { margin:0; color:#fff; }
+  .card .cardhead > :last-child { margin-left:auto; }
   .CodeMirror { max-width:100%; }
 
   /* objective */
-  .obj-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-  .obj-top h2 { margin:0; }
-  .progress { height:6px; background:#0b1018; border-radius:99px; overflow:hidden; margin:2px 0 12px; }
-  .progress i { display:block; height:100%; background:linear-gradient(90deg, var(--acc), var(--gold)); transition:width .6s; }
-  .obj-title { font-size:18px; font-weight:700; margin:0 0 8px; }
+  .progress { height:22px; border:9px solid transparent; border-image:var(--img-track) 22 22 22 22 fill / 11px; margin:2px 0 12px; position:relative; }
+  .progress i { position:absolute; left:-6px; top:-6px; bottom:-6px; min-width:22px; border:8px solid transparent; border-image:var(--img-yellow) 22 22 22 22 fill / 11px; transition:width .6s; }
+  .obj-title { font:17px/1.25 var(--title); margin:0 0 10px; color:#1d2232; }
   .obj-body p { margin:0 0 10px; }
-  .obj-body pre, .docs pre { background:#0b1018; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:0 0 10px; overflow:auto; font:12.5px/1.5 var(--mono); }
-  .obj-body pre code, .docs pre code { background:none; border:0; padding:0; }
-  .reward { color:var(--gold); font-size:12px; white-space:nowrap; }
-  details.hint { background:#141b28; border:1px dashed #34415f; border-radius:8px; padding:6px 10px; }
-  details.hint summary { cursor:pointer; color:var(--blue); }
+  .obj-body pre, .docs pre { background:#0f1530; color:#e8edf6; border-radius:8px; padding:10px 12px; margin:0 0 10px; overflow:auto; font:12.5px/1.5 var(--mono); box-shadow:inset 0 2px 6px rgba(0,0,0,.5); }
+  .obj-body pre code, .docs pre code { background:none; border:0; padding:0; color:inherit; }
+  .reward { color:#fff; font:11px var(--narrow); white-space:nowrap; }
+  details.hint { background:#c9ccdb; border-radius:8px; padding:6px 10px; }
+  details.hint summary { cursor:pointer; color:#11648c; font-weight:600; }
   #objList { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
-  #objList li { display:flex; gap:8px; align-items:center; padding:4px 6px; border-radius:6px; color:var(--dim); cursor:pointer; }
-  #objList li:hover { background:var(--panel2); }
+  #objList li { display:flex; gap:8px; align-items:center; padding:5px 8px; border-radius:6px; color:var(--ink-dim); cursor:pointer; }
+  #objList li:hover { background:#c9ccdb; }
   #objList li .e { font-family:var(--emoji); width:18px; text-align:center; }
-  #objList li.done { color:var(--fg); }
-  #objList li.cur { color:#fff; background:#1d2a40; font-weight:600; }
-  #objList li.viewing { outline:1px solid #34415f; }
+  #objList li.done { color:var(--ink); }
+  #objList li.cur { color:#fff; background:var(--blue); font-weight:600; }
+  #objList li.viewing { outline:2px solid var(--blue); }
 
   /* shop */
-  .shop-item { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
+  .shop-item { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid #b9bdcd; }
   .shop-item:first-of-type { border-top:0; padding-top:0; }
-  .shop-item .e { font-family:var(--emoji); font-size:22px; width:30px; text-align:center; }
+  .shop-item .e { font-family:var(--emoji); font-size:22px; width:32px; text-align:center; }
+  .shop-item .ico { width:30px; height:30px; color:var(--blue); }
   .shop-item .what { flex:1; min-width:0; }
-  .shop-item .what b { display:block; }
-  .shop-item .what small { color:var(--dim); display:block; line-height:1.3; }
+  .shop-item .what b { display:block; font:13px var(--title); }
+  .shop-item .what small { color:var(--ink-dim); display:block; line-height:1.3; }
   .shop-item button { white-space:nowrap; }
-  .owned { color:var(--acc); font-weight:600; }
+  .owned { color:#0e8a57; font:12px var(--title); }
 
   /* map */
-  .mapcard { padding:10px; position:relative; }
-  #map { display:block; width:100%; height:auto; border-radius:8px; cursor:pointer; touch-action:manipulation; }
-  .maphead { display:flex; justify-content:space-between; align-items:center; margin:0 4px 8px; }
-  .maphead h2 { margin:0; }
-  .legend { color:var(--dim); font-size:12px; display:flex; gap:12px; flex-wrap:wrap; }
-  .legend .e { font-family:var(--emoji); }
-  #inspector { position:absolute; right:18px; top:46px; width:240px; background:rgba(14,19,29,.95); border:1px solid #34415f; border-radius:10px; padding:10px 12px; font-size:13px; box-shadow:0 8px 30px rgba(0,0,0,.4); }
-  #inspector pre { margin:6px 0 0; max-height:160px; overflow:auto; font:12px/1.4 var(--mono); color:var(--violet); white-space:pre-wrap; }
-  #inspector .x { position:absolute; right:6px; top:4px; border:0; background:none; padding:2px 6px; color:var(--dim); }
+  .mapcard { padding:4px; position:relative; }
+  #map { display:block; width:100%; height:auto; border-radius:6px; cursor:pointer; touch-action:manipulation; box-shadow:inset 0 0 0 2px #5a6290; }
+  .legend { color:#e5f4ff; font:11px var(--narrow); display:flex; gap:12px; flex-wrap:wrap; letter-spacing:.03em; text-shadow:none; }
+  #inspector { position:absolute; right:18px; top:46px; width:240px; background:rgba(11,16,38,.94); color:var(--fg); border:2px solid #5fd4ff; border-radius:10px; padding:10px 12px; font-size:13px; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+  #inspector code { background:#22305e; color:#e8edf6; }
+  #inspector pre { margin:6px 0 0; max-height:160px; overflow:auto; font:12px/1.4 var(--mono); color:#c4b5fd; white-space:pre-wrap; }
+  #inspector .x { position:absolute; right:4px; top:2px; border:0; border-image:none; background:none; padding:2px 6px; color:var(--dim); text-shadow:none; }
 
   /* log */
-  #log { height:170px; overflow:auto; font:12.5px/1.5 var(--mono); color:var(--dim); }
+  #log { height:170px; overflow:auto; font:12.5px/1.5 var(--mono); color:#c7d0ea; background:#0f1530; border-radius:8px; padding:8px 10px; box-shadow:inset 0 2px 6px rgba(0,0,0,.5); }
   #log div { padding:1px 0; white-space:pre-wrap; word-break:break-word; }
-  #log .err { color:var(--bad); } #log .ok { color:var(--acc); } #log .print { color:var(--blue); } #log .goal { color:var(--gold); }
+  #log .err { color:#ff8a80; } #log .ok { color:#5ef0a8; } #log .print { color:#7dd3fc; } #log .goal { color:#ffd166; }
 
   /* editor */
-  .edhead { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-  .edhead h2 { margin:0; margin-right:auto; }
-  #dirty { color:var(--gold); font-size:12px; }
-  .CodeMirror { height:440px; border:1px solid var(--line); border-radius:8px; background:#0b1018; color:#e8edf6; font:13.5px/1.55 var(--mono); }
+  #dirty { color:#fff3c4; font:11px var(--narrow); white-space:nowrap; }
+  .CodeMirror { height:440px; border-radius:8px; background:#0f1530; color:#e8edf6; font:13.5px/1.55 var(--mono); box-shadow:inset 0 2px 6px rgba(0,0,0,.5); }
   @media (max-width: 860px) { .CodeMirror { height:340px; } }
-  .CodeMirror-gutters { background:#0d131e; border-right:1px solid var(--line); }
-  .CodeMirror-linenumber { color:#4f5d78; }
-  .CodeMirror-cursor { border-left:2px solid var(--acc); }
+  .CodeMirror-gutters { background:#0c1128; border-right:1px solid #222c55; border-radius:8px 0 0 8px; }
+  .CodeMirror-linenumber { color:#4f5d8a; }
+  .CodeMirror-cursor { border-left:2px solid #5ef0a8; }
   .CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected { background:#24365a !important; }
-  .CodeMirror-activeline-background { background:#131b29; }
-  .CodeMirror-matchingbracket { color:var(--acc) !important; text-decoration:underline; }
+  .CodeMirror-activeline-background { background:#151d3d; }
+  .CodeMirror-matchingbracket { color:#5ef0a8 !important; text-decoration:underline; }
   .cm-s-default .cm-keyword { color:#c792ea; } .cm-s-default .cm-def { color:#82aaff; }
   .cm-s-default .cm-variable-2 { color:#e8edf6; } .cm-s-default .cm-builtin { color:#7dd3fc; }
   .cm-s-default .cm-number { color:#f78c6c; } .cm-s-default .cm-string { color:#c3e88d; }
-  .cm-s-default .cm-comment { color:#6b7a96; font-style:italic; } .cm-s-default .cm-operator { color:#89ddff; }
+  .cm-s-default .cm-comment { color:#7180a8; font-style:italic; } .cm-s-default .cm-operator { color:#89ddff; }
   .cm-s-default .cm-property { color:#ffcb6b; } .cm-s-default .cm-variable { color:#e8edf6; }
   .cm-s-default .cm-meta { color:#ffcb6b; } .cm-s-default .cm-bracket { color:#a6b3cc; }
-  .cm-error-line { background:rgba(248,113,113,.16) !important; }
-  .cm-error-gutter { color:var(--bad) !important; font-weight:700; }
-  #errorBox { margin-top:10px; border:1px solid rgba(248,113,113,.5); background:rgba(248,113,113,.08); border-radius:8px; padding:10px 12px; }
-  #errorBox .head { color:var(--bad); font-weight:700; }
-  #errorBox .head small { color:var(--dim); font-weight:400; margin-left:6px; }
+  .cm-error-line { background:rgba(255,107,97,.2) !important; }
+  .cm-error-gutter { color:#ff8a80 !important; font-weight:700; }
+  #errorBox { margin-top:10px; border:2px solid var(--bad); background:#f6d9d8; border-radius:8px; padding:10px 12px; color:#3b1d1c; }
+  #errorBox .head { color:#b3261e; font:700 14px system-ui; }
+  #errorBox .head small { color:#7b5150; font:12px system-ui; margin-left:6px; }
   #errorBox .msg { font-family:var(--mono); font-size:13px; margin:4px 0; word-break:break-word; }
-  #errorBox .hint { color:#cbd5e1; }
-  #errorBox .stale { color:var(--dim); font-size:12px; margin-top:4px; }
-  .okbox { margin-top:10px; color:var(--acc); font-size:13px; }
+  #errorBox .stale { color:#7b5150; font-size:12px; margin-top:4px; }
 
   /* overlays, toasts, dialogs */
-  .overlay { position:fixed; inset:0; background:rgba(8,11,18,.82); display:flex; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(3px); padding:16px; }
+  .overlay { position:fixed; inset:0; background:rgba(5,8,22,.78); display:flex; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(3px); padding:16px; }
   .overlay[hidden] { display:none; }
-  .modal { background:var(--panel); border:1px solid #34415f; border-radius:14px; padding:22px 24px; max-width:460px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.5); }
-  .modal h3 { margin:0 0 8px; font-size:20px; }
+  .modal { color:var(--ink); max-width:470px; width:100%; padding:14px 22px 18px; border:solid transparent; border-width:34px 14px 14px; border-image:var(--img-header) 68 28 28 28 fill / 34px 14px 14px; filter:drop-shadow(0 20px 40px rgba(0,0,0,.6)); }
+  .modal h3 { margin:-36px 0 18px; font:15px/34px var(--title); color:#fff; }
   .modal .big { font-family:var(--emoji); font-size:40px; line-height:1; margin-bottom:10px; }
-  .modal p { color:#cbd5e1; margin:0 0 10px; }
-  .modal ul { margin:0 0 12px; padding-left:20px; color:#cbd5e1; }
-  .bar { height:6px; background:#0b1018; border-radius:99px; overflow:hidden; margin-top:14px; }
-  .bar i { display:block; height:100%; width:40%; background:var(--acc); border-radius:99px; animation:slide 1.2s infinite ease-in-out; }
-  @keyframes slide { 0% { transform:translateX(-100%); } 100% { transform:translateX(250%); } }
+  .modal .big .ico { width:56px; height:56px; color:var(--blue); }
+  .modal p, .modal ul { color:#373e52; } .modal p { margin:0 0 10px; } .modal ul { margin:0 0 12px; padding-left:20px; }
+  .bar { height:22px; border:9px solid transparent; border-image:var(--img-track) 22 22 22 22 fill / 11px; margin-top:14px; position:relative; overflow:hidden; }
+  .bar i { position:absolute; top:-5px; bottom:-5px; width:45%; border:8px solid transparent; border-image:var(--img-green) 22 22 22 22 fill / 11px; animation:slide 1.2s infinite ease-in-out; }
+  @keyframes slide { 0% { left:-45%; } 100% { left:100%; } }
   #toasts { position:fixed; bottom:16px; right:16px; display:flex; flex-direction:column; gap:8px; z-index:60; align-items:flex-end; pointer-events:none; }
   @media (max-width: 860px) { #toasts { left:12px; right:12px; align-items:stretch; } }
-  .toast { background:#1d2a40; border:1px solid #34415f; border-radius:10px; padding:10px 16px; box-shadow:0 10px 30px rgba(0,0,0,.4); animation:pop .3s; max-width:90vw; }
-  .toast.goal { border-color:var(--gold); background:#2a2412; }
-  .toast.bad { border-color:var(--bad); }
+  .toast { color:var(--ink); padding:6px 14px; border:8px solid transparent; border-image:var(--img-panel) 16 fill / 8px; animation:pop .3s; max-width:90vw; filter:drop-shadow(0 8px 18px rgba(0,0,0,.5)); }
+  .toast .reward { color:#a26b00; }
+  .toast.goal { border-image:var(--img-yellow) 22 22 22 22 fill / 11px; color:#3d2a00; padding:4px 16px; }
+  .toast.bad { color:#8a1c16; }
   @keyframes pop { from { transform:translateY(12px); opacity:0; } }
-  dialog { background:var(--panel); color:var(--fg); border:1px solid #34415f; border-radius:14px; padding:0; max-width:min(760px, 94vw); width:100%; }
-  dialog::backdrop { background:rgba(8,11,18,.7); }
-  dialog .dhead { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--panel); }
-  dialog .dhead h3 { margin:0; }
-  dialog .dbody { padding:16px 18px; max-height:75vh; overflow:auto; }
-  .docs h4 { margin:14px 0 6px; color:var(--blue); } .docs h4:first-child { margin-top:0; }
+  dialog { color:var(--ink); padding:0; max-width:min(760px, 94vw); width:100%; background:none; overflow:visible; border:solid transparent; border-width:34px 14px 14px; border-image:var(--img-header) 68 28 28 28 fill / 34px 14px 14px; }
+  dialog::backdrop { background:rgba(5,8,22,.7); }
+  dialog .dhead { display:flex; justify-content:space-between; align-items:center; margin:-34px -6px 0; height:34px; padding:0 4px 0 12px; }
+  dialog .dhead h3 { margin:0; font:15px var(--title); color:#fff; }
+  dialog .dhead button { padding:0 8px 2px; }
+  dialog .dbody { padding:14px 18px; max-height:75vh; overflow:auto; }
+  .docs h4 { margin:16px 0 6px; font:13px var(--title); color:#11648c; } .docs h4:first-child { margin-top:0; }
   .docs table { border-collapse:collapse; width:100%; margin-bottom:6px; }
-  .docs td { border-top:1px solid var(--line); padding:5px 8px; vertical-align:top; }
+  .docs td { border-top:1px solid #b9bdcd; padding:5px 8px; vertical-align:top; }
   .docs td:first-child { white-space:nowrap; }
-  .docs .locked { color:var(--dim); }
+  .docs td:first-child code { background:none; padding:0; }
+  .docs .locked { color:var(--ink-dim); }
   .menu-list { display:flex; flex-direction:column; gap:10px; }
-  .menu-list button { text-align:left; }
-  .menu-list small { display:block; color:var(--dim); }
+  .menu-list button { text-align:left; font:600 14px system-ui; padding:6px 12px 9px; text-transform:none; }
+  .menu-list small { display:block; color:var(--ink-dim); font-weight:400; }
 </style>
 </head>
 <body>
 <div id="boot" class="overlay"><div class="modal" style="text-align:center">
-  <div class="big">🤖</div><h3>Pyworld</h3>
+  <h3>Pyworld</h3><div class="big"><span class="ico drone"></span></div>
   <p id="bootMsg">Unpacking Python…</p><div class="bar"><i></i></div>
 </div></div>
 
 <header class="top">
-  <div class="brand"><span class="e">🤖</span> Pyworld</div>
+  <div class="brand"><span class="ico drone"></span> PYWORLD</div>
   <div class="stats">
-    <div class="chip" id="cOre" title="Ore you can spend in the Shop"><span class="e">💎</span><b id="sOre">0</b><small>ore</small></div>
+    <div class="chip" id="cOre" title="Ore you can spend in the Shop"><span class="ico meteor"></span><b id="sOre">0</b><small>ore</small></div>
     <div class="chip score" id="cScore" title="Score: ore delivered in the last 100 ticks"><span class="e">🏆</span><b id="sScore">0</b><small>score · best <b id="sBest">0</b></small></div>
-    <div class="chip" title="Drones you own"><span class="e">🤖</span><b id="sDrones">1/8</b><small>drones</small></div>
+    <div class="chip" id="cDrones" title="Drones you own"><span class="ico drone"></span><b id="sDrones">1/8</b><small>drones</small></div>
     <div class="chip" title="Lines of your code each drone may run per tick"><span class="e">⚙️</span><b id="sCpu">200</b><small>CPU</small></div>
     <div class="chip" title="Ticks (turns) so far"><span class="e">⏱️</span><b id="sTick">0</b><small>tick</small></div>
   </div>
   <div class="controls">
     <button id="run" class="primary" title="Start or pause time (Space when not typing)">▶ Run</button>
     <button id="step" title="Advance one tick">Step</button>
-    <div class="seg" id="speed" title="Ticks per second">
-      <button data-tps="2">2/s</button><button data-tps="5" class="on">5/s</button><button data-tps="15">15/s</button><button data-tps="40">40/s</button>
+    <div class="seg" id="speed" title="Speed: 2, 5, 15 or 40 ticks per second">
+      <span class="lbl">SPEED</span><button data-tps="2">1</button><button data-tps="5" class="on">2</button><button data-tps="15">3</button><button data-tps="40">4</button>
     </div>
     <button id="docsBtn">📖 API</button>
+    <button id="muteBtn" title="Sound on/off">🔊</button>
     <button id="menuBtn" title="Save, reset">⋯</button>
   </div>
 </header>
@@ -191,13 +226,13 @@
 <main class="layout">
   <aside class="side">
     <section class="card" id="objCard"></section>
-    <section class="card shop-card"><h2>🛒 Shop</h2><div id="shop"></div></section>
+    <section class="card shop-card"><h2>Shop</h2><div id="shop"></div></section>
     <section class="card objlist-card"><h2>Objectives</h2><ol id="objList"></ol></section>
   </aside>
   <section class="center">
     <div class="card mapcard">
-      <div class="maphead"><h2>Colony</h2>
-        <div class="legend"><span><span class="e">🏠</span> base (0, 0)</span><span id="hover">hover a tile to see its (x, y)</span></div></div>
+      <div class="cardhead"><h2>Colony</h2>
+        <div class="legend"><span>station = base (0, 0)</span><span id="hover">hover a tile to see its (x, y)</span></div></div>
       <canvas id="map" aria-label="Colony map"></canvas>
       <div id="inspector" hidden></div>
     </div>
@@ -205,7 +240,7 @@
   </section>
   <section class="right">
     <div class="card editor-card">
-      <div class="edhead"><h2>Your code</h2><span id="dirty" hidden>● not deployed yet</span>
+      <div class="cardhead"><h2>Your code</h2><span id="dirty" hidden>● changed</span>
         <button id="deploy" class="primary" title="Load this code into your drones">Deploy<kbd>Ctrl+Enter</kbd></button></div>
       <textarea id="code" spellcheck="false"></textarea>
       <div id="errorBox" hidden></div>
@@ -216,7 +251,7 @@
 <div id="toasts"></div>
 
 <div id="runaway" class="overlay" hidden><div class="modal">
-  <div class="big">⏱️</div><h3>Your code took too long</h3>
+  <h3>Your code took too long</h3><div class="big">⏱️</div>
   <p id="runawayWhy"></p>
   <ul>
     <li>A <code>while</code> loop whose condition never becomes <code>False</code></li>
@@ -345,8 +380,8 @@ function noteChanges(old, s) {
     const cur = dronePos(a, now);
     if (a.x !== d.x || a.y !== d.y) a.dir = [Math.sign(d.x - a.x), Math.sign(d.y - a.y)];
     a.fx = cur[0]; a.fy = cur[1]; a.x = d.x; a.y = d.y; a.t0 = now;
-    if (old && d.cargo > a.cargo) floatText(d.x, d.y, "+" + (d.cargo - a.cargo), "#f5c04a");
-    if (old && d.cargo < a.cargo && d.x === s.base[0] && d.y === s.base[1]) floatText(d.x, d.y, "+" + (a.cargo - d.cargo) + " 💎", "#4ade80", true);
+    if (old && d.cargo > a.cargo) { floatText(d.x, d.y, "+" + (d.cargo - a.cargo), "#ffd166"); sfx("mine"); }
+    if (old && d.cargo < a.cargo && d.x === s.base[0] && d.y === s.base[1]) { floatText(d.x, d.y, "+" + (a.cargo - d.cargo) + " ORE", "#5ef0a8", true); sfx("unload"); }
     a.cargo = d.cargo;
   }
   for (const id of [...anim.drones.keys()]) if (!seen.has(id)) anim.drones.delete(id);
@@ -355,7 +390,8 @@ function noteChanges(old, s) {
   if (s.best_score > old.best_score) bump("cScore");
   const was = new Set(old.objectives.filter(o => o.done).map(o => o.id));
   for (const o of s.objectives) if (o.done && !was.has(o.id)) {
-    toast(`✅ Objective complete: <b>${esc(o.title)}</b>${o.reward ? ` <span class="reward">+${o.reward} 💎</span>` : ""}`, "goal", 5000);
+    toast(`✅ Objective complete: <b>${esc(o.title)}</b>${o.reward ? ` <span class="reward">+${o.reward} ore</span>` : ""}`, "goal", 5000);
+    sfx("goal");
     if (viewingObjective === o.id) viewingObjective = null;
   }
 }
@@ -373,7 +409,7 @@ async function call(cmd, args, timeout) {
 }
 
 async function recover(cmd) {
-  setRunning(false);
+  setRunning(false); sfx("runaway");
   const secs = WATCHDOG_MS / 1000;
   $("#runawayWhy").innerHTML = cmd === "deploy"
     ? `The top part of your code (outside <code>def tick</code>) ran for more than ${secs} seconds, so Pyworld stopped it. Your previous code is still running.`
@@ -410,7 +446,7 @@ async function deploy() {
   const code = cm.getValue(), before = deployedCode;
   const r = await call("deploy", { code });
   if (!r) return false;
-  if (r.ok) { if (before !== code) prevCode = before; toast("✅ Code deployed"); }
+  if (r.ok) { if (before !== code) prevCode = before; toast("✅ Code deployed"); sfx("deploy"); } else sfx("error");
   apply(r);
   if (!r.ok) toast("⚠️ Deploy failed: your previous code is still running", "bad");
   return r.ok;
@@ -440,7 +476,7 @@ $("#step").onclick = () => { setRunning(false); anim.tickMs = 250; stepOnce(1); 
 for (const b of document.querySelectorAll("#speed button")) b.onclick = () => {
   tps = +b.dataset.tps;
   document.querySelectorAll("#speed button").forEach(x => x.classList.toggle("on", x === b));
-  store.set(PREFS_KEY, JSON.stringify({ tps }));
+  savePrefs();
 };
 $("#deploy").onclick = deploy;
 document.addEventListener("keydown", e => {
@@ -448,6 +484,7 @@ document.addEventListener("keydown", e => {
 });
 
 // ---------------------------------------------------------------- editor + errors
+function savePrefs() { store.set(PREFS_KEY, JSON.stringify({ tps, muted })); }
 function isDirty() { return cm.getValue() !== deployedCode; }
 function updateDirty() { $("#dirty").hidden = !isDirty(); }
 let marked = null;
@@ -480,7 +517,11 @@ function render() {
   $("#sTick").textContent = s.tick;
   renderObjectives(); renderShop(); renderLog(); renderInspector(); updateDirty();
   const key = JSON.stringify(s.error);
-  if (key !== lastErrorKey) { lastErrorKey = key; if (!s.error || !(s.error.local)) showError(s.error); }
+  if (key !== lastErrorKey) {
+    lastErrorKey = key;
+    if (!s.error || !(s.error.local)) showError(s.error);
+    if (s.error && !firstSnap && !/^Deploy/.test(s.error.who || "")) sfx("error");
+  }
   firstSnap = false;
 }
 
@@ -493,13 +534,13 @@ function renderObjectives() {
     objKey = key;
     const card = $("#objCard");
     if (!cur) {
-      card.innerHTML = `<div class="obj-top"><h2>Sandbox</h2><span class="reward">${done}/${total} ✓</span></div>
+      card.innerHTML = `<div class="cardhead"><h2>Sandbox</h2><span class="reward">${done}/${total} ✓</span></div>
         <div class="progress"><i style="width:100%"></i></div><p class="obj-title">🎉 All objectives done</p>
         <div class="obj-body">${md("You know the whole API. Now it's about **score**: ore delivered in the last 100 ticks.\n\nYour best is shown at the top. Try smarter routes, spreading drones out, or buying drones earlier, and see how high it goes.")}</div>`;
     } else {
       const idx = s.objectives.indexOf(cur) + 1;
       const label = cur.done ? `Objective ${idx} · done ✓` : `Objective ${idx} of ${total}`;
-      card.innerHTML = `<div class="obj-top"><h2>${label}</h2>${cur.reward ? `<span class="reward">Reward: ${cur.reward} 💎</span>` : ""}</div>
+      card.innerHTML = `<div class="cardhead"><h2>${label}</h2>${cur.reward ? `<span class="reward">Reward: ${cur.reward} ore</span>` : ""}</div>
         <div class="progress"><i style="width:${(done / total) * 100}%"></i></div>
         <p class="obj-title">${esc(cur.title)}</p><div class="obj-body">${md(cur.text)}</div>
         <details class="hint"><summary>💡 Stuck? Show a hint</summary><div>${inline(cur.hint)}</div></details>
@@ -533,20 +574,20 @@ function renderShop() {
   const shop = $("#shop"); shop.innerHTML = "";
   const item = (icon, name, desc, btn) => {
     const el = document.createElement("div"); el.className = "shop-item";
-    el.innerHTML = `<span class="e">${icon}</span><div class="what"><b>${name}</b><small>${desc}</small></div>`;
+    el.innerHTML = `${icon.startsWith("<") ? icon : `<span class="e">${icon}</span>`}<div class="what"><b>${name}</b><small>${desc}</small></div>`;
     el.appendChild(btn); shop.appendChild(el);
   };
   const full = s.drones.length >= s.max_drones;
   const b = document.createElement("button");
-  b.textContent = full ? "Max" : `${s.drone_cost} 💎`; b.disabled = full || s.ore < s.drone_cost;
-  b.onclick = async () => { const r = await call("buy", {}); if (r) apply(r); };
-  item("🤖", "Drone", `Runs the same tick() code. ${s.drones.length}/${s.max_drones} owned.`, b);
+  b.textContent = full ? "Max" : `${s.drone_cost} ore`; b.disabled = full || s.ore < s.drone_cost;
+  b.onclick = async () => { const r = await call("buy", {}); if (r) { apply(r); if (r.ok) sfx("buy"); } };
+  item('<span class="ico drone"></span>', "Drone", `Runs the same tick() code. ${s.drones.length}/${s.max_drones} owned.`, b);
   for (const [name, t] of Object.entries(s.tech_info)) {
     let el;
     if (t.owned) { el = document.createElement("span"); el.className = "owned"; el.textContent = "✓ Owned"; }
     else {
-      el = document.createElement("button"); el.textContent = `${t.cost} 💎`; el.disabled = s.ore < t.cost;
-      el.onclick = async () => { const r = await call("unlock", { name }); if (r) apply(r); };
+      el = document.createElement("button"); el.textContent = `${t.cost} ore`; el.disabled = s.ore < t.cost;
+      el.onclick = async () => { const r = await call("unlock", { name }); if (r) { apply(r); if (r.ok) sfx("buy"); } };
     }
     item(SHOP_ICONS[name] || "🔧", name, esc(t.desc), el);
   }
@@ -583,7 +624,7 @@ function renderInspector() {
 
 // ---------------------------------------------------------------- rendering: map canvas
 const canvas = $("#map"), ctx = canvas.getContext("2d");
-const DRONE_COLORS = ["#56B4E9", "#E69F00", "#009E73", "#F0E442", "#CC79A7", "#D55E00", "#0072B2", "#E8EDF6"]; // Okabe-Ito
+const DRONE_COLORS = ["#56B4E9", "#E69F00", "#2fd3a0", "#F0E442", "#ff8fd1", "#ff6a3d", "#5b8cff", "#E8EDF6"]; // Okabe-Ito based, brightened for space
 let cell = 32;
 function sizeCanvas() {
   if (!snap) return;
@@ -603,91 +644,119 @@ function dronePos(a, now) {
 }
 function floatText(x, y, text, color, big) { anim.floats.push({ x, y, text, color, big, t0: performance.now() }); }
 
-function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+// Sprites: Kenney "Simple Space" (CC0). White art, tinted per use on cached offscreen canvases.
+const SPRITE_SRC = {
+  drone: "{{asset:kenney/space/enemy_D.png}}", station: "{{asset:kenney/space/station_C.png}}",
+  meteorA: "{{asset:kenney/space/meteor_detailedLarge.png}}", meteorB: "{{asset:kenney/space/meteor_squareDetailedLarge.png}}",
+  meteorC: "{{asset:kenney/space/meteor_detailedSmall.png}}", meteorD: "{{asset:kenney/space/meteor_squareDetailedSmall.png}}",
+  starT: "{{asset:kenney/space/star_tiny.png}}", starS: "{{asset:kenney/space/star_small.png}}", starM: "{{asset:kenney/space/star_medium.png}}",
+  flame: "{{asset:kenney/space/effect_yellow.png}}", alert: "{{asset:kenney/space/icon_exclamationSmall.png}}",
+};
+const sprites = {};
+for (const [k, src] of Object.entries(SPRITE_SRC)) { const im = new Image(); im.src = src; sprites[k] = im; }
+const tintCache = new Map();
+function tinted(name, color) {
+  const key = name + color;
+  if (tintCache.has(key)) return tintCache.get(key);
+  const im = sprites[name];
+  if (!im.complete || !im.naturalWidth) return null;
+  const c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight;
+  const g = c.getContext("2d");
+  g.drawImage(im, 0, 0);
+  g.globalCompositeOperation = "multiply"; g.fillStyle = color; g.fillRect(0, 0, c.width, c.height);  // keep the shading
+  g.globalCompositeOperation = "destination-in"; g.drawImage(im, 0, 0);                              // keep the shape
+  tintCache.set(key, c);
+  return c;
+}
+function sprite(name, color, cx, cy, size, rot = 0, alpha = 1) {
+  const img = color ? tinted(name, color) : sprites[name];
+  if (!img || (!color && !img.complete)) return;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(cx, cy); if (rot) ctx.rotate(rot);
+  ctx.drawImage(img, -size / 2, -size / 2, size, size); ctx.restore();
+}
 
-function drawGround(s) {
+function drawSpace(s, now) {
+  const W = s.w * cell, H = s.h * cell;
+  const g = ctx.createRadialGradient(W * .25, H * .2, 0, W * .5, H * .5, Math.max(W, H) * .8);
+  g.addColorStop(0, "#1b2457"); g.addColorStop(.55, "#0d1333"); g.addColorStop(1, "#070a1d");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const neb = ctx.createRadialGradient(W * .78, H * .7, 0, W * .78, H * .7, W * .35);
+  neb.addColorStop(0, "rgba(124,92,214,.18)"); neb.addColorStop(1, "rgba(124,92,214,0)");
+  ctx.fillStyle = neb; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "rgba(140,170,255,.07)"; ctx.lineWidth = 1;   // faint grid keeps (x, y) readable
+  ctx.beginPath();
+  for (let x = 1; x < s.w; x++) { ctx.moveTo(x * cell + .5, 0); ctx.lineTo(x * cell + .5, H); }
+  for (let y = 1; y < s.h; y++) { ctx.moveTo(0, y * cell + .5); ctx.lineTo(W, y * cell + .5); }
+  ctx.stroke();
   for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
-    const n = hash(x, y);
-    ctx.fillStyle = (x + y) % 2 ? `rgb(${22 + n * 6},${30 + n * 7},${40 + n * 8})` : `rgb(${25 + n * 6},${34 + n * 7},${45 + n * 8})`;
-    ctx.fillRect(x * cell, y * cell, cell + .5, cell + .5);
-    if (n > .86) { ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.beginPath(); ctx.arc((x + .3 + n * .4) * cell, (y + .6) * cell, cell * .06, 0, 7); ctx.fill(); }
+    const n = hash(x * 3 + 7, y * 5 + 1);
+    if (n < .55) continue;
+    const kind = n > .97 ? "starM" : n > .85 ? "starS" : "starT";
+    const tw = .45 + .55 * Math.abs(Math.sin(now / (900 + n * 900) + n * 40));
+    sprite(kind, null, (x + hash(y, x * 2)) * cell, (y + hash(x + 9, y)) * cell, cell * (kind === "starM" ? .32 : kind === "starS" ? .22 : .14), 0, tw * .8);
   }
 }
-function drawCrystal(cx, by, w, h, light) {
-  ctx.beginPath(); ctx.moveTo(cx, by - h); ctx.lineTo(cx + w / 2, by - h * .62); ctx.lineTo(cx + w / 2 * .8, by); ctx.lineTo(cx - w / 2 * .8, by); ctx.lineTo(cx - w / 2, by - h * .62); ctx.closePath();
-  const g = ctx.createLinearGradient(cx - w / 2, by - h, cx + w / 2, by);
-  g.addColorStop(0, light ? "#fff3c4" : "#ffe08a"); g.addColorStop(.5, "#f5c04a"); g.addColorStop(1, "#b7791f");
-  ctx.fillStyle = g; ctx.fill();
-  ctx.strokeStyle = "rgba(60,35,0,.55)"; ctx.lineWidth = 1; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx, by - h); ctx.lineTo(cx, by); ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.stroke();
-}
+const METEORS = ["meteorA", "meteorB", "meteorC", "meteorD"];
 function drawOre(s, now) {
-  for (const [x, y, a, max] of s.ore_tiles) {
-    const px = x * cell, py = y * cell;
-    if (a <= 0) {
-      ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.beginPath(); ctx.ellipse(px + cell / 2, py + cell * .62, cell * .26, cell * .12, 0, 0, 7); ctx.fill();
-      continue;
-    }
-    const f = Math.min(1, a / 15);
-    ctx.fillStyle = `rgba(245,192,74,${.05 + f * .09})`; ctx.fillRect(px, py, cell, cell);
-    const glint = Math.sin(now / 700 + x * 1.7 + y * 2.3) > .97;
-    const s2 = .45 + .55 * f, cx = px + cell / 2 + (hash(y, x) - .5) * cell * .15;
-    drawCrystal(cx, py + cell * (.5 + .3 * s2), cell * .42 * s2, cell * .62 * s2, glint);
+  for (const [x, y, a] of s.ore_tiles) {
+    const n = hash(y + 3, x + 11), cx = (x + .5) * cell, cy = (y + .5) * cell;
+    const kind = METEORS[Math.floor(n * 4)], spin = now / (6000 + n * 9000) * (n > .5 ? 1 : -1) + n * 6;
+    if (a <= 0) { sprite(kind, "#59607a", cx, cy, cell * .32, spin, .45); continue; }
+    const f = Math.min(1, a / 15), size = cell * (.48 + .44 * f);
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, cell * .62);
+    glow.addColorStop(0, `rgba(245,184,48,${.12 + f * .14})`); glow.addColorStop(1, "rgba(245,184,48,0)");
+    ctx.fillStyle = glow; ctx.fillRect(cx - cell, cy - cell, cell * 2, cell * 2);
+    sprite(kind, "#f2b632", cx, cy, size, spin);
+    if (Math.sin(now / 650 + n * 50) > .985) sprite("starS", null, cx + size * .25, cy - size * .25, cell * .28, 0, .9);  // glint
   }
 }
 function drawBase(s, now) {
   const [bx, by] = s.base, cx = (bx + .5) * cell, cy = (by + .5) * cell;
   const pulse = .5 + .5 * Math.sin(now / 700);
-  ctx.fillStyle = `rgba(96,165,250,${.18 + pulse * .12})`; ctx.beginPath(); ctx.arc(cx, cy, cell * .62, 0, 7); ctx.fill();
-  ctx.strokeStyle = "rgba(96,165,250,.7)"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(cx, cy, cell * .46, now / 2000, now / 2000 + 7); ctx.stroke(); ctx.setLineDash([]);
-  ctx.font = `${cell * .62}px ${getComputedStyle(document.body).getPropertyValue("--emoji")}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("🏠", cx, cy + cell * .04);
+  const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, cell * 1.1);
+  glow.addColorStop(0, `rgba(95,212,255,${.28 + pulse * .12})`); glow.addColorStop(1, "rgba(95,212,255,0)");
+  ctx.fillStyle = glow; ctx.fillRect(cx - cell * 1.2, cy - cell * 1.2, cell * 2.4, cell * 2.4);
+  sprite("station", "#7fe0ff", cx, cy, cell * 1.05, now / 9000);
 }
 function drawDrone(d, a, now, color) {
   const [fx, fy] = dronePos(a, now), cx = (fx + .5) * cell, cy = (fy + .5) * cell;
-  const moving = Math.abs(fx - a.x) + Math.abs(fy - a.y) > .01, bob = Math.sin(now / 260 + d.id) * cell * .03;
-  const r = cell * .34, y0 = cy + bob - cell * .04;
-  ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(cx, cy + cell * .36, r * .8, r * .25, 0, 0, 7); ctx.fill();
-  if (selectedDrone === d.id) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, cell * .5, 0, 7); ctx.stroke(); }
-  ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, cell * .05);
-  ctx.beginPath(); ctx.moveTo(cx, y0 - r); ctx.lineTo(cx, y0 - r - cell * .14); ctx.stroke();
-  ctx.fillStyle = Math.sin(now / 300 + d.id * 2) > 0 ? "#fef08a" : color; ctx.beginPath(); ctx.arc(cx, y0 - r - cell * .16, cell * .06, 0, 7); ctx.fill();
-  roundRect(cx - r, y0 - r, r * 2, r * 1.75, r * .45); ctx.fillStyle = color; ctx.fill();
-  ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 1.2; ctx.stroke();
-  roundRect(cx - r * .72, y0 - r * .62, r * 1.44, r * .8, r * .3); ctx.fillStyle = "#0b1220"; ctx.fill();
-  const [dx, dy] = a.dir, ex = dx * r * .16, ey = dy * r * .12, blink = (now / 1000 + d.id * .7) % 4 < .12;
-  ctx.fillStyle = "#e0f2fe";
-  for (const side of [-1, 1]) {
-    if (blink) ctx.fillRect(cx + side * r * .32 + ex - r * .13, y0 - r * .22 + ey, r * .26, r * .06);
-    else { ctx.beginPath(); ctx.arc(cx + side * r * .32 + ex, y0 - r * .22 + ey, r * .14, 0, 7); ctx.fill(); }
+  const moving = Math.abs(fx - a.x) + Math.abs(fy - a.y) > .01;
+  const target = Math.atan2(a.dir[1], a.dir[0]) + Math.PI / 2;               // sprite's nose points up
+  let diff = ((target - (a.rot ?? target)) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+  a.rot = (a.rot ?? target) + diff * .2;                                       // turn smoothly
+  const size = cell * .82, bob = Math.sin(now / 260 + d.id) * cell * .025;
+  if (selectedDrone === d.id) {
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.arc(cx, cy, cell * .52, now / 600, now / 600 + 7); ctx.stroke(); ctx.setLineDash([]);
   }
-  const cap = snap.capacity, pw = (r * 1.6) / cap;
+  if (moving) {
+    ctx.save(); ctx.translate(cx, cy + bob); ctx.rotate(a.rot);
+    const fl = sprites.flame; if (fl.complete) { ctx.globalAlpha = .55 + .35 * Math.random(); ctx.drawImage(fl, -size * .16, size * .22, size * .32, size * .55); }
+    ctx.restore();
+  }
+  sprite("drone", color, cx, cy + bob, size, a.rot);
+  const cap = snap.capacity, pw = size * .9 / cap, py = cy + size * .5 + 1;
   for (let i = 0; i < cap; i++) {
-    ctx.fillStyle = i < d.cargo ? "#f5c04a" : "rgba(0,0,0,.4)";
-    ctx.fillRect(cx - r * .8 + i * pw + .5, y0 + r * .42, pw - 1, r * .22);
+    ctx.fillStyle = i < d.cargo ? "#f5b830" : "rgba(10,14,35,.75)";
+    ctx.fillRect(cx - size * .45 + i * pw + .5, py, pw - 1.5, Math.max(3, cell * .08));
   }
   if (cell >= 24) {
-    ctx.font = `700 ${Math.max(8, cell * .22)}px system-ui`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.beginPath(); ctx.arc(cx + r * .95, y0 - r * .85, cell * .14, 0, 7); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.fillText(d.id, cx + r * .95, y0 - r * .84);
+    ctx.font = `${Math.max(8, cell * .22)}px "Kenney Future", system-ui`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(7,10,29,.8)"; ctx.beginPath(); ctx.arc(cx + size * .45, cy - size * .42, cell * .15, 0, 7); ctx.fill();
+    ctx.fillStyle = color; ctx.fillText(d.id, cx + size * .45, cy - size * .41);
   }
-  if (moving && Math.random() < .25) anim.floats.push({ x: fx + .5 - a.dir[0] * .35, y: fy + .85, dust: true, t0: now });
   const e = snap.error;
-  if (e && e.who === "drone " + d.id && snap.tick - e.tick <= 1) {
-    ctx.font = `${cell * .42}px ${getComputedStyle(document.body).getPropertyValue("--emoji")}`; ctx.textBaseline = "bottom";
-    ctx.fillText("❗", cx, y0 - r - cell * .12);
-  }
+  if (e && e.who === "drone " + d.id && snap.tick - e.tick <= 1) sprite("alert", "#ff5a4f", cx, cy - size * .7, cell * .42);
 }
 function drawFloats(now) {
-  anim.floats = anim.floats.filter(f => now - f.t0 < (f.dust ? 450 : 1100));
+  anim.floats = anim.floats.filter(f => now - f.t0 < 1100);
   for (const f of anim.floats) {
-    const t = (now - f.t0) / (f.dust ? 450 : 1100);
-    if (f.dust) { ctx.fillStyle = `rgba(200,210,230,${.25 * (1 - t)})`; ctx.beginPath(); ctx.arc(f.x * cell, f.y * cell, cell * (.05 + t * .1), 0, 7); ctx.fill(); continue; }
+    const t = (now - f.t0) / 1100;
     ctx.globalAlpha = 1 - t * t;
-    ctx.font = `800 ${cell * (f.big ? .42 : .34)}px system-ui, ${getComputedStyle(document.body).getPropertyValue("--emoji")}`;
+    ctx.font = `${cell * (f.big ? .4 : .32)}px "Kenney Future", system-ui`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    const x = (f.x + .5) * cell, y = (f.y + .1) * cell - t * cell * .8;
-    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.strokeText(f.text, x, y);
+    const x = (f.x + .5) * cell, y = (f.y + .05) * cell - t * cell * .8;
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(5,8,22,.85)"; ctx.strokeText(f.text, x, y);
     ctx.fillStyle = f.color; ctx.fillText(f.text, x, y);
     ctx.globalAlpha = 1;
   }
@@ -696,13 +765,33 @@ function frame(now) {
   if (snap) {
     if (canvas.width === 0 || Math.abs(canvas.clientWidth / snap.w - cell) > .5) sizeCanvas();
     const s = snap;
-    ctx.clearRect(0, 0, s.w * cell, s.h * cell);
-    drawGround(s); drawOre(s, now); drawBase(s, now);
+    drawSpace(s, now); drawOre(s, now); drawBase(s, now);
     for (const d of s.drones) { const a = anim.drones.get(d.id); if (a) drawDrone(d, a, now, DRONE_COLORS[(d.id - 1) % DRONE_COLORS.length]); }
     drawFloats(now);
   }
   requestAnimationFrame(frame);
 }
+
+// Sounds: Kenney "Sci-Fi Sounds" (CC0). Throttled so 8 drones mining don't become noise.
+const SOUNDS = {
+  mine: ["{{asset:kenney/sounds/laserSmall_000.ogg}}", .18], unload: ["{{asset:kenney/sounds/forceField_000.ogg}}", .3],
+  deploy: ["{{asset:kenney/sounds/doorOpen_000.ogg}}", .45], buy: ["{{asset:kenney/sounds/laserRetro_000.ogg}}", .2],
+  goal: ["{{asset:kenney/sounds/forceField_002.ogg}}", .45], error: ["{{asset:kenney/sounds/impactMetal_002.ogg}}", .45],
+  runaway: ["{{asset:kenney/sounds/lowFrequency_explosion_000.ogg}}", .6],
+};
+const sfxBase = {}, sfxLast = {};
+let muted = false;
+function sfx(name) {
+  if (muted || document.hidden) return;
+  const now = performance.now();
+  if (now - (sfxLast[name] || 0) < (name === "mine" ? 140 : 80)) return;
+  sfxLast[name] = now;
+  const [src, vol] = SOUNDS[name];
+  const base = sfxBase[name] ||= new Audio(src);
+  const a = base.cloneNode(); a.volume = vol; a.play().catch(() => {});
+}
+function setMuted(m) { muted = m; $("#muteBtn").textContent = m ? "🔇" : "🔊"; savePrefs(); }
+$("#muteBtn").onclick = () => setMuted(!muted);
 function tileAt(ev) {
   const r = canvas.getBoundingClientRect();
   return [Math.floor((ev.clientX - r.left) / cell), Math.floor((ev.clientY - r.top) / cell)];
@@ -799,7 +888,8 @@ async function boot() {
     },
   });
   cm.on("change", () => { updateDirty(); saveDraft(); });
-  try { tps = JSON.parse(store.get(PREFS_KEY) || "{}").tps || 5; } catch (e) {}
+  try { const pr = JSON.parse(store.get(PREFS_KEY) || "{}"); tps = pr.tps || 5; muted = !!pr.muted; } catch (e) {}
+  setMuted(muted);
   document.querySelectorAll("#speed button").forEach(x => x.classList.toggle("on", +x.dataset.tps === tps));
 
   await new Promise(r => setTimeout(r, 30)); // let the boot screen paint
